@@ -1,0 +1,17 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "pdfread",
+  "version": "0.1.0",
+  "description": "Offline technical PDF reader with instant English to Vietnamese translation",
+  "license": "AGPL-3.0-only",
+  "builtin-baseline": "177e8175121536d414f405ed8b3099b325a42638",
+  "dependencies": [],
+  "features": {
+    "tests": {
+      "description": "Unit tests (Catch2)",
+      "dependencies": [
+        "catch2"
+      ]
+    }
+  }
+}

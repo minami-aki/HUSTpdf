@@ -1,0 +1,20 @@
+# Build
+/build/
+/out/
+CMakeUserPresets.json
+
+# IDE
+/.vs/
+/.vscode/
+/.idea/
+*.user
+*.suo
+
+# Mô hình dịch: không bao giờ commit
+*.gguf
+/models/
+
+# Linh tinh
+*.log
+.DS_Store
+Thumbs.db
