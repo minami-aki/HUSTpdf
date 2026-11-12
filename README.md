@@ -9,7 +9,7 @@ Trình đọc PDF khoa học – kỹ thuật, dịch Anh → Việt tức thờ
 | Mốc | Nội dung | Trạng thái |
 |---|---|---|
 | M0 | Khung dự án: CMake + vcpkg, `util/`, unit test | xong |
-| M1 | Cửa sổ, mở PDF, render, cuộn liên tục, zoom | chưa |
+| M1 | Cửa sổ, mở PDF, render, cuộn liên tục, zoom | xong |
 | M2 | Bôi đen, tô sáng, lấy text | chưa |
 | M3 | llama.cpp + HY-MT1.5, popup dịch streaming | chưa |
 | M4 | Tầng 2: làm sạch, tách câu, ngữ cảnh | chưa |
@@ -34,7 +34,32 @@ cmake --build --preset debug
 ctest --preset debug
 ```
 
-Lần build đầu vcpkg sẽ tải và biên dịch các thư viện phụ thuộc nên chậm; các lần sau dùng binary cache.
+Lần build đầu vcpkg sẽ tải và biên dịch các thư viện phụ thuộc nên chậm (khoảng 15–20 phút, chủ yếu là MuPDF và HarfBuzz); các lần sau dùng binary cache.
+
+## Chạy
+
+```powershell
+.\build\release\src\pdfread.exe [file.pdf] [--page N] [--zoom 150 | --fit-page] [--timing] [--verbose]
+```
+
+| Phím / thao tác | Tác dụng |
+|---|---|
+| Ctrl+O, kéo thả file | Mở PDF |
+| Lăn chuột, ↑ ↓, PgUp PgDn, Space, Home End | Cuộn |
+| ← → | Trang trước / sau (khi không có cuộn ngang) |
+| Ctrl + lăn chuột | Zoom quanh vị trí con trỏ |
+| Ctrl + / Ctrl − / Ctrl 0 | Phóng to / thu nhỏ / 100% |
+| Ctrl 1 / Ctrl 2 | Vừa chiều rộng / vừa trang |
+| Kéo chuột giữa | Di chuyển trang |
+
+`--timing` ghi thời gian mở file, dựng display list, render từng tile ra log (bản Debug có console).
+
+Công cụ kiểm thử:
+
+```powershell
+.\build\debug\tests\make_sample_pdf.exe sample.pdf 8          # tạo PDF mẫu 12 trang
+.\build\debug\src\pdfread.exe sample.pdf --snapshot out.png   # chờ render xong, chụp cửa sổ, thoát
+```
 
 ## Cấu trúc thư mục
 

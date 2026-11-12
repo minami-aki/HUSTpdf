@@ -1,4 +1,9 @@
 find_package(Threads REQUIRED)
+find_package(OpenGL REQUIRED)
+find_package(glfw3 CONFIG REQUIRED)
+find_package(imgui CONFIG REQUIRED)
+find_package(nfd CONFIG REQUIRED)
+find_package(unofficial-libmupdf CONFIG REQUIRED)
 
 # --- util -------------------------------------------------------------------
 add_library(pdfread_util STATIC
@@ -12,7 +17,51 @@ target_link_libraries(pdfread_util
     PRIVATE pdfread_options
 )
 
+# --- pdf: lớp bọc MuPDF -----------------------------------------------------
+add_library(pdfread_pdf STATIC
+    pdf/context.cpp
+    pdf/document.cpp
+    pdf/render_service.cpp
+)
+target_link_libraries(pdfread_pdf
+    PUBLIC pdfread_util
+    PRIVATE pdfread_options unofficial::libmupdf::libmupdf
+)
+
+# --- ui: viewer, layout, texture cache, font --------------------------------
+add_library(pdfread_ui STATIC
+    ui/fonts.cpp
+    ui/page_layout.cpp
+    ui/texture_cache.cpp
+    ui/viewer.cpp
+)
+target_link_libraries(pdfread_ui
+    PUBLIC pdfread_pdf imgui::imgui glfw OpenGL::GL
+    PRIVATE pdfread_options
+)
+
 # --- app --------------------------------------------------------------------
-add_executable(pdfread app/main.cpp)
-target_compile_definitions(pdfread PRIVATE PDFREAD_VERSION="${PROJECT_VERSION}")
-target_link_libraries(pdfread PRIVATE pdfread_util pdfread_options)
+add_executable(pdfread
+    app/app.cpp
+    app/main.cpp
+)
+target_compile_definitions(pdfread PRIVATE
+    PDFREAD_VERSION="${PROJECT_VERSION}"
+    PDFREAD_SOURCE_DATA_DIR="${PROJECT_SOURCE_DIR}/data"
+)
+target_link_libraries(pdfread PRIVATE pdfread_ui nfd::nfd pdfread_options)
+
+# Release: ứng dụng GUI (không mở cửa sổ console). Debug giữ console để xem log.
+if(WIN32)
+    set_target_properties(pdfread PROPERTIES WIN32_EXECUTABLE $<CONFIG:Release>)
+    if(MSVC)
+        target_link_options(pdfread PRIVATE $<$<CONFIG:Release>:/ENTRY:mainCRTStartup>)
+    endif()
+endif()
+
+# Chép font (và dữ liệu khác) cạnh file chạy.
+add_custom_command(TARGET pdfread POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${PROJECT_SOURCE_DIR}/data/fonts" "$<TARGET_FILE_DIR:pdfread>/data/fonts"
+    VERBATIM
+)

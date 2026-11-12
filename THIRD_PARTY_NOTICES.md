@@ -4,18 +4,20 @@ Pdfread phát hành theo AGPL-3.0. Dự án dùng (hoặc dự kiến dùng) cá
 
 | Thành phần | Giấy phép | Dùng ở | Trạng thái |
 |---|---|---|---|
-| MuPDF 1.28.x | AGPL-3.0 | đọc/render PDF | dự kiến (M1) |
-| — FreeType | FreeType License (FTL) | phụ thuộc của MuPDF, imgui_freetype | dự kiến (M1) |
-| — HarfBuzz | MIT ("Old MIT") | phụ thuộc của MuPDF | dự kiến (M1) |
-| — zlib | zlib | phụ thuộc của MuPDF | dự kiến (M1) |
-| — libjpeg-turbo | IJG + BSD-3-Clause | phụ thuộc của MuPDF | dự kiến (M1) |
-| — OpenJPEG | BSD-2-Clause | phụ thuộc của MuPDF | dự kiến (M1) |
-| — jbig2dec | AGPL-3.0 | phụ thuộc của MuPDF | dự kiến (M1) |
-| — Gumbo | Apache-2.0 | phụ thuộc của MuPDF | dự kiến (M1) |
-| GLFW | zlib | cửa sổ, input | dự kiến (M1) |
-| Dear ImGui | MIT | giao diện | dự kiến (M1) |
-| nativefiledialog-extended | zlib | hộp thoại mở file | dự kiến (M1) |
-| Noto Sans, Noto Sans Math | SIL OFL-1.1 | font giao diện | dự kiến (M1) |
+| MuPDF 1.28.6 | AGPL-3.0 | đọc/render PDF | đang dùng (M1) |
+| — font nhúng trong MuPDF (URW base-14, Noto không gồm CJK; build với `TOFU_CJK`) | AGPL-3.0 (URW), OFL-1.1 | font dự phòng khi PDF không nhúng font | đang dùng (M1) |
+| — FreeType | FreeType License (FTL) | phụ thuộc của MuPDF, imgui_freetype | đang dùng (M1) |
+| — HarfBuzz | MIT ("Old MIT") | phụ thuộc của MuPDF | đang dùng (M1) |
+| — zlib | zlib | phụ thuộc của MuPDF | đang dùng (M1) |
+| — libjpeg-turbo | IJG + BSD-3-Clause | phụ thuộc của MuPDF | đang dùng (M1) |
+| — OpenJPEG | BSD-2-Clause | phụ thuộc của MuPDF | đang dùng (M1) |
+| — jbig2dec | AGPL-3.0 | phụ thuộc của MuPDF | đang dùng (M1) |
+| — Gumbo | Apache-2.0 | phụ thuộc của MuPDF | đang dùng (M1) |
+| — libpng, brotli, bzip2 | libpng, MIT, bzip2 | phụ thuộc của FreeType | đang dùng (M1) |
+| GLFW 3.5 | zlib | cửa sổ, input | đang dùng (M1) |
+| Dear ImGui 1.93 | MIT | giao diện | đang dùng (M1) |
+| nativefiledialog-extended 1.4 | zlib | hộp thoại mở file | đang dùng (M1) |
+| Noto Sans, Noto Sans Math (`data/fonts`, kèm `OFL.txt`) | SIL OFL-1.1 | font giao diện | đang dùng (M1) |
 | llama.cpp / ggml | MIT | suy luận mô hình dịch | đã thêm submodule (v0.9.0), dùng từ M3 |
 | nlohmann/json | MIT | đọc `data/domains.json`, cài đặt | dự kiến (M5) |
 | SQLite | Public domain | cache, glossary, cài đặt | dự kiến (M6) |

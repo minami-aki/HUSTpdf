@@ -5,7 +5,20 @@
   "description": "Offline technical PDF reader with instant English to Vietnamese translation",
   "license": "AGPL-3.0-only",
   "builtin-baseline": "177e8175121536d414f405ed8b3099b325a42638",
-  "dependencies": [],
+  "dependencies": [
+    "glfw3",
+    {
+      "name": "imgui",
+      "features": [
+        "freetype",
+        "glfw-binding",
+        "opengl3-binding",
+        "wchar32"
+      ]
+    },
+    "libmupdf",
+    "nativefiledialog-extended"
+  ],
   "features": {
     "tests": {
       "description": "Unit tests (Catch2)",

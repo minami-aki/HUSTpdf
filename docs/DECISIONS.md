@@ -13,7 +13,25 @@ Bổ sung cho [CLAUDE.md](../CLAUDE.md). Mỗi mục ghi ngày chốt; muốn đ
 | 4 | SHA-256 khi tải mô hình | **Tự viết** theo FIPS 180-4, kiểm bằng vector thử chuẩn | libcurl trên Windows dùng Schannel, không kèm OpenSSL; tránh phụ thuộc nền tảng. |
 | 5 | Font | **Noto Sans** (Regular + Bold) + **ký hiệu toán lấy từ Noto Sans Math** (merge font ImGui); subset glyph khi đóng gói | Đủ tiếng Việt và Hy Lạp; OFL-1.1. |
 | 6 | Glossary khởi đầu | Claude soạn bản nháp 30–50 thuật ngữ/lĩnh vực con, cột `source = draft`; người dùng duyệt và đổi thành `verified` | Có dữ liệu để phát triển M5 ngay, người dùng giữ quyền quyết định nội dung. |
-| 7 | Toolchain Windows | **MSVC + CMake + Ninja + vcpkg**, triplet **`x64-windows-static`** (CRT tĩnh `/MT`) | Ra một file `.exe` gần như không kèm DLL. |
+| 7 | Toolchain Windows | **MSVC + CMake + Ninja + vcpkg**, triplet **`x64-windows-static`** (CRT tĩnh `/MT`; từ M1 dùng biến thể `x64-windows-static-pdfread`, xem bên dưới) | Ra một file `.exe` gần như không kèm DLL. |
+
+## 2026-11-13 — chi tiết kỹ thuật chốt trong M1 (không đổi đặc tả)
+
+- **ImGui 1.93** tạo glyph theo nhu cầu (từ 1.92), nên không còn dùng `GetGlyphRangesVietnamese`: toàn bộ ký tự trong Noto Sans + Noto Sans Math đều hiển thị được. Port vcpkg bật `wchar32` để có ký hiệu toán ngoài BMP (𝑥, 𝛼…).
+- **Context MuPDF theo luồng:** mỗi luồng (UI, render, loader) gắn một `fz_clone_context` vào `thread_local`; các lớp RAII giải phóng bằng context của luồng hiện tại. Mọi truy cập `fz_document` đi qua một mutex; render từ display list chạy song song.
+- **Render theo tile 512×512 ở mọi mức zoom** (một đường code duy nhất, chỉ render phần nhìn thấy). Tỉ lệ render lượng tử hóa 1/4096 để khóa cache ổn định. Trong lúc chờ tile ở tỉ lệ mới, tạm phóng to/thu nhỏ tile của tỉ lệ cũ.
+- **Cache:** display list LRU 48 trang/tài liệu; texture LRU giới hạn 160 MB (tính RGBA); kho MuPDF 256 MB.
+- **Luồng render:** min(3, số luồng phần cứng / 2).
+- **"Vừa chiều rộng"/"vừa trang"** khớp theo khổ trang phổ biến nhất trong tài liệu (không phải trang rộng nhất), để vài trang khổ ngang không làm các trang dọc bị thu nhỏ; trang rộng hơn thì cuộn ngang.
+- **Zoom 100% = 96 dpi** nhân hệ số DPI màn hình.
+- Vòng lặp: `glfwWaitEvents` khi đứng yên, vẽ thêm 2 frame sau mỗi sự kiện; luồng nền đánh thức bằng `glfwPostEmptyEvent`.
+
+## 2026-11-13 — bỏ font CJK nhúng trong MuPDF
+
+- Triplet riêng `triplets/x64-windows-static-pdfread.cmake` (= `x64-windows-static` + cờ theo port), nạp qua `VCPKG_OVERLAY_TRIPLETS` trong `CMakePresets.json`.
+- MuPDF build với `TOFU_CJK`: bỏ Source Han và Droid Sans Fallback (~28 MB). Vẫn giữ URW base-14 và các font Noto không phải CJK (Hy Lạp, Cyrillic, ký hiệu, toán).
+- Hệ quả chấp nhận: PDF tiếng Trung/Nhật/Hàn không nhúng font sẽ hiện ô vuông.
+- Kết quả: `pdfread.exe` (release) giảm từ 39,4 MB xuống 15,75 MB. Phần lớn còn lại là font Noto không phải CJK (~12 MB); có thể bỏ thêm bằng `TOFU_NOTO` nếu cần.
 
 ## Thông tin tham chiếu
 
