@@ -14,6 +14,13 @@ option(PDFREAD_BUILD_TESTS "Build unit tests" ON)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(CompilerOptions)
 
+# Mọi file chạy và DLL vào chung một thư mục: ggml nạp các DLL backend CPU từ thư mục
+# của file chạy, và test cần các DLL đó cạnh pdfread_tests.exe.
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+include(Llama)
+
 add_subdirectory(src)
 
 if(PDFREAD_BUILD_TESTS)

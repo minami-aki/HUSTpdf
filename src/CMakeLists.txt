@@ -30,18 +30,35 @@ target_link_libraries(pdfread_pdf
     PRIVATE pdfread_options unofficial::libmupdf::libmupdf
 )
 
-# --- ui: viewer, layout, texture cache, font --------------------------------
+# --- translate: interface Translator, backend llama.cpp, luồng suy luận ------
+add_library(pdfread_translate STATIC
+    translate/llama_translator.cpp
+    translate/prompt.cpp
+    translate/translation_service.cpp
+)
+target_link_libraries(pdfread_translate
+    PUBLIC pdfread_util
+    PRIVATE pdfread_options llama ggml
+)
+
+# --- ui: viewer, layout, texture cache, font, popup dịch --------------------
 add_library(pdfread_ui STATIC
     ui/fonts.cpp
     ui/page_layout.cpp
     ui/selection.cpp
     ui/texture_cache.cpp
+    ui/translation_popup.cpp
     ui/viewer.cpp
 )
 target_link_libraries(pdfread_ui
-    PUBLIC pdfread_pdf imgui::imgui glfw OpenGL::GL
+    PUBLIC pdfread_pdf pdfread_translate imgui::imgui glfw OpenGL::GL
     PRIVATE pdfread_options
 )
+
+# --- công cụ dịch thử từ dòng lệnh -------------------------------------------
+add_executable(pdfread_translate_cli ${PROJECT_SOURCE_DIR}/tools/translate_cli/main.cpp)
+set_target_properties(pdfread_translate_cli PROPERTIES OUTPUT_NAME pdfread-translate)
+target_link_libraries(pdfread_translate_cli PRIVATE pdfread_translate pdfread_options)
 
 # --- app --------------------------------------------------------------------
 add_executable(pdfread

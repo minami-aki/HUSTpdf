@@ -11,6 +11,7 @@ void Selection::clear() {
     dragging_ = false;
     dirty_ = false;
     quads_.clear();
+    if (!text_.empty()) ++version_;
     text_.clear();
 }
 
@@ -50,6 +51,7 @@ void Selection::update(const TextLookup& text_of) {
     const SelectionPoint& last = forward ? focus_ : anchor_;
 
     quads_.clear();
+    std::string previous = std::move(text_);
     text_.clear();
     bool complete = true;
     for (int page = first.page; page <= last.page; ++page) {
@@ -71,6 +73,7 @@ void Selection::update(const TextLookup& text_of) {
         text_ += part;
     }
     dirty_ = !complete;
+    if (text_ != previous) ++version_;
 }
 
 }  // namespace pdfread::ui

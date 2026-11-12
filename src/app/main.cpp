@@ -2,6 +2,7 @@
 //
 // Tham số dòng lệnh:
 //   pdfread [file.pdf] [--page N] [--zoom 150 | --fit-page] [--timing] [--verbose]
+//           [--model file.gguf] [--threads N] [--gen-prompt] [--repack]
 //   pdfread file.pdf --snapshot out.png   (kiểm thử: chờ render xong, chụp cửa sổ, thoát)
 
 #include <charconv>
@@ -147,6 +148,14 @@ int run(const std::vector<std::string>& args) {
             options.zoom = std::atof(next().c_str()) / 100.0;
         } else if (a == "--fit-page") {
             options.fit_page = true;
+        } else if (a == "--model") {
+            options.model_path = path_from_utf8(next());
+        } else if (a == "--threads") {
+            options.threads = std::max(0, std::atoi(next().c_str()));
+        } else if (a == "--gen-prompt") {
+            options.add_generation_prompt = true;
+        } else if (a == "--repack") {
+            options.repack_weights = true;
         } else if (a == "--select") {
             const std::string& spec = next();
             options.select = parse_select(spec);
@@ -158,6 +167,10 @@ int run(const std::vector<std::string>& args) {
         }
     }
     options.font_dir = find_data_dir() / "fonts";
+    options.model_search_dirs.push_back(executable_dir() / "models");
+#ifdef PDFREAD_SOURCE_DATA_DIR
+    options.model_search_dirs.push_back(path_from_utf8(PDFREAD_SOURCE_DATA_DIR).parent_path() / "models");
+#endif
 
     glfwSetErrorCallback(on_glfw_error);
     if (!glfwInit()) return 1;

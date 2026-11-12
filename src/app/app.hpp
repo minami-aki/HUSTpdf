@@ -10,11 +10,14 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <vector>
 
 #include "pdf/document.hpp"
 #include "pdf/render_service.hpp"
 #include "pdf/text_service.hpp"
+#include "translate/translation_service.hpp"
 #include "ui/texture_cache.hpp"
+#include "ui/translation_popup.hpp"
 #include "ui/viewer.hpp"
 #include "util/concurrent_queue.hpp"
 #include "util/thread_pool.hpp"
@@ -42,6 +45,12 @@ struct AppOptions {
     bool fit_page = false;
     std::optional<SelectSpec> select;
     std::filesystem::path font_dir;
+
+    std::filesystem::path model_path;                     // rỗng: tự tìm trong model_search_dirs
+    std::vector<std::filesystem::path> model_search_dirs;
+    int threads = 0;                                      // luồng suy luận, 0 = mặc định
+    bool add_generation_prompt = false;                   // xem translate::ModelConfig
+    bool repack_weights = false;                          // xem translate::ModelConfig
 };
 
 class App {
@@ -75,6 +84,13 @@ private:
     void set_status(std::string text, bool is_error);
     void update_snapshot(int fb_width, int fb_height);
 
+    void update_translation();
+    void request_translation();
+    void draw_translation_popup();
+    void choose_model_dialog();
+    void load_model(const std::filesystem::path& path);
+    [[nodiscard]] std::filesystem::path find_default_model() const;
+
     static void on_drop(GLFWwindow* window, int count, const char** paths);
     static void on_refresh(GLFWwindow* window);
     static void on_content_scale(GLFWwindow* window, float xscale, float yscale);
@@ -86,8 +102,16 @@ private:
     ThreadPool loader_;  // mở tài liệu ở nền (1 luồng)
     pdf::RenderService render_;
     pdf::TextService text_service_;
+    translate::TranslationService translation_;
     ui::TextureCache textures_;
     ui::Viewer viewer_;
+    ui::TranslationPopup popup_;
+
+    bool auto_translate_ = true;
+    std::uint64_t seen_selection_version_ = 0;
+    bool seen_dragging_ = false;
+    double translate_at_ = 0;  // thời điểm gửi yêu cầu dịch sau debounce (0 = không có)
+    std::string model_status_ = "chưa có";
 
     std::uint64_t frame_ = 0;
     float ui_scale_ = 1.0f;

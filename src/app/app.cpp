@@ -16,6 +16,7 @@
 #include <nfd.h>
 
 #include "pdf/context.hpp"
+#include "translate/llama_translator.hpp"
 #include "ui/fonts.hpp"
 #include "util/log.hpp"
 #include "util/utf8.hpp"
@@ -23,7 +24,9 @@
 namespace pdfread::app {
 namespace {
 
-constexpr double kSnapshotTimeoutSeconds = 30.0;
+constexpr double kSnapshotTimeoutSeconds = 60.0;
+constexpr double kTranslateDebounceSeconds = 0.25;  // chờ sau khi thả chuột rồi mới dịch
+constexpr std::size_t kMaxTranslateChars = 2000;    // giới hạn độ dài đoạn gửi đi dịch
 
 App* app_from(GLFWwindow* window) { return static_cast<App*>(glfwGetWindowUserPointer(window)); }
 
@@ -42,6 +45,8 @@ App::App(GLFWwindow* window, const pdf::RootContext& root, AppOptions options)
       }),
       render_(root, 0, [] { glfwPostEmptyEvent(); }),
       text_service_(root, [] { glfwPostEmptyEvent(); }),
+      translation_([](const translate::ModelConfig& c) { return std::make_unique<translate::LlamaTranslator>(c); },
+                   [] { glfwPostEmptyEvent(); }),
       viewer_(render_, text_service_, textures_) {
     glfwSetWindowUserPointer(window_, this);
     glfwSetDropCallback(window_, &App::on_drop);
@@ -57,6 +62,14 @@ App::App(GLFWwindow* window, const pdf::RootContext& root, AppOptions options)
     if (options_.fit_page) viewer_.set_zoom_mode(ui::ZoomMode::FitPage);
     if (options_.zoom) viewer_.set_zoom(*options_.zoom);
     if (!options_.open_path.empty()) open_file(options_.open_path);
+
+    // Nạp mô hình dịch ngay khi mở app (trên luồng suy luận, không chặn UI).
+    const std::filesystem::path model = options_.model_path.empty() ? find_default_model() : options_.model_path;
+    if (!model.empty()) {
+        load_model(model);
+    } else {
+        log::info("Chưa có mô hình dịch: chọn file GGUF bằng nút \"Mô hình…\"");
+    }
 
     start_time_ = glfwGetTime();
 }
@@ -77,8 +90,12 @@ int App::run() {
         if (frames_left > 0 || snapshot_mode) {
             glfwPollEvents();
         } else {
-            // Đứng yên: chờ sự kiện. Đang gõ chữ thì thức định kỳ cho con trỏ nhấp nháy.
-            if (ImGui::GetIO().WantTextInput) glfwWaitEventsTimeout(0.5);
+            // Đứng yên: chờ sự kiện. Thức dậy đúng hẹn nếu đang đếm debounce trước khi dịch,
+            // hoặc định kỳ cho con trỏ nhấp nháy khi đang gõ chữ.
+            double timeout = -1;
+            if (translate_at_ > 0) timeout = std::max(0.0, translate_at_ - glfwGetTime());
+            if (ImGui::GetIO().WantTextInput) timeout = timeout < 0 ? 0.5 : std::min(timeout, 0.5);
+            if (timeout >= 0) glfwWaitEventsTimeout(timeout);
             else glfwWaitEvents();
             frames_left = 2;  // ImGui cần thêm một frame để cập nhật trạng thái hover/active
         }
@@ -151,7 +168,105 @@ bool App::draw_ui() {
 
     draw_status_bar();
     ImGui::End();
+
+    update_translation();
+    draw_translation_popup();
     return busy;
+}
+
+// --- dịch ----------------------------------------------------------------------
+
+void App::update_translation() {
+    using Kind = translate::TranslationEvent::Kind;
+    for (const translate::TranslationEvent& e : translation_.take_events()) {
+        switch (e.kind) {
+            case Kind::ModelLoading: model_status_ = "đang nạp…"; break;
+            case Kind::ModelReady: model_status_ = e.text; break;
+            case Kind::ModelFailed:
+                model_status_ = "lỗi";
+                set_status(std::format("Không nạp được mô hình dịch: {}", e.text), true);
+                break;
+            default: break;
+        }
+        popup_.on_event(e);
+    }
+
+    // Vùng chọn đổi: đang kéo thì ẩn bản dịch cũ; thả chuột xong thì hẹn giờ dịch.
+    const std::uint64_t version = viewer_.selection_version();
+    const bool dragging = viewer_.selection_dragging();
+    if (version != seen_selection_version_ || dragging != seen_dragging_) {
+        seen_selection_version_ = version;
+        seen_dragging_ = dragging;
+        translate_at_ = 0;
+        if (!viewer_.has_selection() || dragging) {
+            if (popup_.visible()) {
+                popup_.hide();
+                translation_.cancel();
+            }
+        } else if (auto_translate_) {
+            translate_at_ = glfwGetTime() + kTranslateDebounceSeconds;
+        }
+    }
+    if (translate_at_ > 0 && glfwGetTime() >= translate_at_) {
+        translate_at_ = 0;
+        request_translation();
+    }
+}
+
+void App::request_translation() {
+    if (!viewer_.has_selection()) return;
+    // Text bôi đen giữ nguyên xuống dòng của PDF; tạm nối thành một dòng (M4 sẽ làm
+    // sạch và tách câu đúng cách).
+    std::string text = viewer_.selection_text();
+    std::replace(text.begin(), text.end(), '\n', ' ');
+    const bool truncated = utf8_length(text) > kMaxTranslateChars;
+    if (truncated) text = utf8_truncate(text, kMaxTranslateChars);
+
+    translate::TranslateRequest request;
+    request.text = std::move(text);
+    const std::uint64_t id = translation_.submit(std::move(request));
+    popup_.show(id, truncated);
+}
+
+void App::draw_translation_popup() {
+    if (!popup_.visible()) return;
+    const auto& anchor = viewer_.selection_screen_rect();
+    if (!anchor) return;  // vùng chọn đang ở ngoài vùng nhìn
+    if (!popup_.draw(*anchor, viewer_.viewport_rect(), ui_scale_, translation_.model_state())) {
+        translation_.cancel();
+    }
+}
+
+void App::choose_model_dialog() {
+    nfdu8char_t* out = nullptr;
+    const nfdu8filteritem_t filters[] = {{"Mô hình GGUF", "gguf"}};
+    const nfdresult_t result = NFD_OpenDialogU8(&out, filters, 1, nullptr);
+    if (result == NFD_OKAY) {
+        load_model(path_from_utf8(out));
+        NFD_FreePathU8(out);
+    }
+}
+
+void App::load_model(const std::filesystem::path& path) {
+    translate::ModelConfig config;
+    config.model_path = path;
+    config.threads = options_.threads;
+    config.add_generation_prompt = options_.add_generation_prompt;
+    config.repack_weights = options_.repack_weights;
+    translation_.load_model(std::move(config));
+}
+
+std::filesystem::path App::find_default_model() const {
+    std::filesystem::path fallback;
+    for (const std::filesystem::path& dir : options_.model_search_dirs) {
+        std::error_code ec;
+        for (const auto& entry : std::filesystem::directory_iterator(dir, ec)) {
+            if (!entry.is_regular_file() || entry.path().extension() != ".gguf") continue;
+            if (path_to_utf8(entry.path().filename()).find("HY-MT") != std::string::npos) return entry.path();
+            if (fallback.empty()) fallback = entry.path();
+        }
+    }
+    return fallback;
 }
 
 void App::draw_toolbar() {
@@ -242,6 +357,13 @@ void App::draw_toolbar() {
     mode_button("Vừa trang", ui::ZoomMode::FitPage, "Hiện trọn một trang");
 
     ImGui::EndDisabled();
+
+    ImGui::SameLine(0, 18.0f * ui_scale_);
+    ImGui::Checkbox("Dịch tự động", &auto_translate_);
+    ImGui::SetItemTooltip("Dịch ngay khi bôi đen xong. Tắt thì dịch bằng Ctrl+T.");
+    ImGui::SameLine();
+    if (ImGui::Button("Mô hình…")) choose_model_dialog();
+    ImGui::SetItemTooltip("Chọn file mô hình dịch (GGUF)");
     ImGui::EndChild();
     ImGui::PopStyleVar(2);
 }
@@ -261,9 +383,12 @@ void App::draw_status_bar() {
         ImGui::TextUnformatted(status_.c_str());
         if (status_is_error_) ImGui::PopStyleColor();
     }
-    if (viewer_.document()) {
-        const std::string right = std::format("Trang {} / {}   ·   {:.0f}%", viewer_.current_page() + 1,
-                                              viewer_.page_count(), viewer_.zoom() * 100.0);
+    {
+        std::string right = std::format("Mô hình: {}", model_status_);
+        if (viewer_.document()) {
+            right = std::format("Trang {} / {}   ·   {:.0f}%   ·   {}", viewer_.current_page() + 1,
+                                viewer_.page_count(), viewer_.zoom() * 100.0, right);
+        }
         const float w = ImGui::CalcTextSize(right.c_str()).x;
         ImGui::SameLine(std::max(ImGui::GetWindowWidth() - w - pad, ImGui::GetCursorPosX() + pad));
         ImGui::TextUnformatted(right.c_str());
@@ -275,6 +400,7 @@ void App::handle_shortcuts() {
     if (io.WantTextInput) return;
     if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_O)) open_dialog();
     if (!viewer_.document()) return;
+    if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_T)) request_translation();
     if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_C) && viewer_.has_selection()) {
         ImGui::SetClipboardText(viewer_.selection_text().c_str());
         log::debug("Đã sao chép {} ký tự", utf8_length(viewer_.selection_text()));
@@ -348,8 +474,12 @@ void App::set_status(std::string text, bool is_error) {
 
 void App::update_snapshot(int fb_width, int fb_height) {
     // Chụp khi tài liệu đã mở và mọi tile nhìn thấy đã render xong, ổn định vài frame.
+    // Có vùng chọn đặt sẵn và có mô hình: chờ dịch xong.
+    const bool waiting_translation =
+        options_.select && translation_.model_state() != translate::ModelState::None &&
+        (translate_at_ > 0 || popup_.busy() || (auto_translate_ && viewer_.has_selection() && !popup_.visible()));
     const bool ready = viewer_.document() && viewer_.fully_rendered() && !render_.busy() &&
-                       (!options_.select || viewer_.selection_complete());
+                       (!options_.select || viewer_.selection_complete()) && !waiting_translation;
     snapshot_stable_frames_ = ready ? snapshot_stable_frames_ + 1 : 0;
     const bool timed_out = glfwGetTime() - start_time_ > kSnapshotTimeoutSeconds;
     const bool failed_open = !loading_ && !viewer_.document() && frame_ > 2;
@@ -369,6 +499,7 @@ void App::update_snapshot(int fb_width, int fb_height) {
         }
         pdf::save_png(*pix, options_.snapshot_path);
         if (options_.select) log::info("SELECTION<<{}>>", viewer_.selection_text());
+        if (popup_.visible()) log::info("TRANSLATION<<{}>>", popup_.text());
         log::info("Đã lưu ảnh chụp {} ({}x{})", path_to_utf8(options_.snapshot_path), fb_width, fb_height);
         exit_code_ = (timed_out || failed_open) ? 2 : 0;
         if (timed_out) log::warn("Hết thời gian chờ render, ảnh chụp có thể chưa đủ");

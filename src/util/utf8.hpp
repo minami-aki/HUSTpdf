@@ -26,6 +26,18 @@ namespace pdfread {
     return n;
 }
 
+// Cắt chuỗi UTF-8 còn tối đa `max_chars` ký tự (không cắt giữa ký tự).
+[[nodiscard]] inline std::string utf8_truncate(std::string_view s, std::size_t max_chars) {
+    std::size_t chars = 0;
+    for (std::size_t i = 0; i < s.size(); ++i) {
+        if ((static_cast<unsigned char>(s[i]) & 0xC0) != 0x80) {
+            if (chars == max_chars) return std::string(s.substr(0, i));
+            ++chars;
+        }
+    }
+    return std::string(s);
+}
+
 // Bản xem trước một dòng: gộp khoảng trắng/xuống dòng thành một dấu cách, cắt ở
 // biên ký tự sau tối đa `max_chars` ký tự và thêm "…" nếu bị cắt.
 [[nodiscard]] inline std::string utf8_preview(std::string_view s, std::size_t max_chars) {

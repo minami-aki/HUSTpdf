@@ -366,6 +366,8 @@ bool Viewer::draw(ImVec2 size, float ui_scale, float fb_scale, std::uint64_t fra
 
     const ImRect inner = ImGui::GetCurrentWindow()->InnerRect;
     const ImVec2 origin = inner.Min;
+    viewport_ = {inner.Min, inner.Max};
+    selection_rect_.reset();
     if (std::abs(inner.GetWidth() - view_w_) > 0.5 || std::abs(inner.GetHeight() - view_h_) > 0.5) {
         view_w_ = inner.GetWidth();
         view_h_ = inner.GetHeight();
@@ -502,12 +504,26 @@ void Viewer::draw_page(ImDrawList* dl, int page, const ImVec2& origin, float fb_
     draw_selection(dl, page, p0);
 }
 
-void Viewer::draw_selection(ImDrawList* dl, int page, const ImVec2& page_origin) const {
+void Viewer::draw_selection(ImDrawList* dl, int page, const ImVec2& page_origin) {
     const std::vector<pdf::Quad>* quads = selection_.quads(page);
     if (quads == nullptr) return;
     const float upp = static_cast<float>(layout_.units_per_pt());
     auto at = [&](const pdf::PointF& p) { return ImVec2(page_origin.x + p.x * upp, page_origin.y + p.y * upp); };
-    for (const pdf::Quad& q : *quads) dl->AddQuadFilled(at(q.ul), at(q.ur), at(q.lr), at(q.ll), kSelectionColor);
+    for (const pdf::Quad& q : *quads) {
+        const ImVec2 pts[4] = {at(q.ul), at(q.ur), at(q.lr), at(q.ll)};
+        dl->AddQuadFilled(pts[0], pts[1], pts[2], pts[3], kSelectionColor);
+        // Khung bao trên màn hình (để đặt popup dịch), chỉ phần nằm trong vùng nhìn.
+        for (const ImVec2& p : pts) {
+            const ImVec2 c(std::clamp(p.x, viewport_.first.x, viewport_.second.x),
+                           std::clamp(p.y, viewport_.first.y, viewport_.second.y));
+            if (!selection_rect_) {
+                selection_rect_ = std::make_pair(c, c);
+            } else {
+                selection_rect_->first = ImVec2(std::min(selection_rect_->first.x, c.x), std::min(selection_rect_->first.y, c.y));
+                selection_rect_->second = ImVec2(std::max(selection_rect_->second.x, c.x), std::max(selection_rect_->second.y, c.y));
+            }
+        }
+    }
 }
 
 void Viewer::collect_prefetch(float fb_scale) {

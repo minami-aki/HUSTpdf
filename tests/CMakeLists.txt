@@ -16,6 +16,8 @@ add_executable(pdfread_tests
     pdf/test_tiles.cpp
     pdf/test_document.cpp
     pdf/test_text_page.cpp
+    translate/test_prompt.cpp
+    translate/test_translation_service.cpp
 )
 target_link_libraries(pdfread_tests PRIVATE
     pdfread_ui pdfread_test_support pdfread_options Catch2::Catch2WithMain)

@@ -55,6 +55,14 @@ public:
     [[nodiscard]] bool has_selection() const noexcept { return selection_.active(); }
     [[nodiscard]] const std::string& selection_text() const noexcept { return selection_.text(); }
     [[nodiscard]] bool selection_complete() const noexcept { return selection_.complete(); }
+    [[nodiscard]] bool selection_dragging() const noexcept { return selection_.dragging(); }
+    [[nodiscard]] std::uint64_t selection_version() const noexcept { return selection_.version(); }
+    // Khung bao phần vùng chọn đang nhìn thấy (tọa độ màn hình), nếu có; tính trong draw().
+    [[nodiscard]] const std::optional<std::pair<ImVec2, ImVec2>>& selection_screen_rect() const noexcept {
+        return selection_rect_;
+    }
+    // Vùng nhìn (không gồm thanh cuộn), tọa độ màn hình.
+    [[nodiscard]] std::pair<ImVec2, ImVec2> viewport_rect() const noexcept { return viewport_; }
     void clear_selection() { selection_.clear(); }
     // Đặt vùng chọn bằng tọa độ trang (dùng cho chế độ kiểm thử --select).
     void select(const SelectionPoint& a, const SelectionPoint& b, pdf::SelectUnit unit);
@@ -81,7 +89,7 @@ private:
     [[nodiscard]] double x_offset() const noexcept;
     [[nodiscard]] ViewTransform make_view(const ImVec2& origin) const noexcept;
     void draw_page(ImDrawList* dl, int page, const ImVec2& origin, float fb_scale, std::uint64_t frame);
-    void draw_selection(ImDrawList* dl, int page, const ImVec2& page_origin) const;
+    void draw_selection(ImDrawList* dl, int page, const ImVec2& page_origin);
     void collect_prefetch(float fb_scale);
     void request_text(int first_visible, int last_visible, std::uint64_t frame);
 
@@ -112,6 +120,8 @@ private:
 
     std::unordered_map<int, TextEntry> texts_;
     Selection selection_;
+    std::optional<std::pair<ImVec2, ImVec2>> selection_rect_;
+    std::pair<ImVec2, ImVec2> viewport_;
 };
 
 }  // namespace pdfread::ui

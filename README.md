@@ -11,7 +11,7 @@ Trình đọc PDF khoa học – kỹ thuật, dịch Anh → Việt tức thờ
 | M0 | Khung dự án: CMake + vcpkg, `util/`, unit test | xong |
 | M1 | Cửa sổ, mở PDF, render, cuộn liên tục, zoom | xong |
 | M2 | Bôi đen, tô sáng, lấy text | xong |
-| M3 | llama.cpp + HY-MT1.5, popup dịch streaming | chưa |
+| M3 | llama.cpp + HY-MT1.5, popup dịch streaming | xong |
 | M4 | Tầng 2: làm sạch, tách câu, ngữ cảnh | chưa |
 | M5 | Tầng 1: lĩnh vực, glossary, placeholder, hậu kiểm | chưa |
 | M6 | Cache SQLite, tải mô hình, đánh giá, CI | chưa |
@@ -36,10 +36,17 @@ ctest --preset debug
 
 Lần build đầu vcpkg sẽ tải và biên dịch các thư viện phụ thuộc nên chậm (khoảng 15–20 phút, chủ yếu là MuPDF và HarfBuzz); các lần sau dùng binary cache.
 
+Mọi file chạy và DLL nằm chung trong `build/<preset>/bin/`: `pdfread.exe`, các DLL của llama.cpp/ggml (`llama.dll`, `ggml*.dll`, mỗi biến thể CPU một `ggml-cpu-*.dll`, ggml tự chọn biến thể tốt nhất lúc chạy), thư mục `data/fonts`.
+
+## Mô hình dịch
+
+Không đóng gói kèm. Tải `HY-MT1.5-1.8B-Q4_K_M.gguf` (1,13 GB) từ [tencent/HY-MT1.5-1.8B-GGUF](https://huggingface.co/tencent/HY-MT1.5-1.8B-GGUF) (giấy phép Tencent HY Community License) và đặt vào thư mục `models/` (cạnh `pdfread.exe` hoặc ở gốc dự án khi phát triển; `models/` nằm trong `.gitignore`), hoặc chọn file bằng nút **Mô hình…**. SHA-256: `4383ac0c3c8e476de98ff979c2a3f069f8c4fb385e7860cf2d28da896cc477c7`.
+
 ## Chạy
 
 ```powershell
-.\build\release\src\pdfread.exe [file.pdf] [--page N] [--zoom 150 | --fit-page] [--timing] [--verbose]
+.\build\release\bin\pdfread.exe [file.pdf] [--page N] [--zoom 150 | --fit-page] [--timing] [--verbose]
+                                [--model file.gguf] [--threads N] [--repack] [--gen-prompt]
 ```
 
 | Phím / thao tác | Tác dụng |
@@ -55,19 +62,27 @@ Lần build đầu vcpkg sẽ tải và biên dịch các thư viện phụ thu�
 | Nhấn đúp / nhấn ba lần | Chọn từ / chọn dòng (giữ chuột kéo tiếp để mở rộng theo từ / dòng) |
 | Shift + nhấn | Mở rộng vùng chọn tới điểm nhấn |
 | Ctrl+C, Esc | Sao chép vùng chọn, bỏ chọn |
+| (thả chuột) / Ctrl+T | Dịch vùng chọn: tự động sau 250 ms nếu bật "Dịch tự động", hoặc thủ công |
 
-`--timing` ghi thời gian mở file, dựng display list, render từng tile ra log (bản Debug có console).
+Tham số mô hình: `--threads N` số luồng suy luận (mặc định = số nhân vật lý, tối đa 8); `--repack` sắp xếp lại trọng số cho AVX2/AVX-512 (prompt dài xử lý nhanh hơn nhưng tốn thêm ~700 MB RAM); `--gen-prompt` kết thúc prompt bằng `<｜hy_Assistant｜>` thay vì như ví dụ chính thức.
+
+`--timing` ghi thời gian mở file, dựng display list, render từng tile, nạp mô hình, token đầu tiên, token/s ra log (bản Debug có console).
 
 Công cụ kiểm thử:
 
 ```powershell
-.\build\debug\tests\make_sample_pdf.exe sample.pdf 8          # tạo PDF mẫu 12 trang
-.\build\debug\src\pdfread.exe sample.pdf --snapshot out.png   # chờ render xong, chụp cửa sổ, thoát
+.\build\debug\bin\make_sample_pdf.exe sample.pdf 8          # tạo PDF mẫu 12 trang
+.\build\debug\bin\pdfread.exe sample.pdf --snapshot out.png   # chờ render xong, chụp cửa sổ, thoát
 # Đặt sẵn vùng chọn (trang từ 1, tọa độ point từ góc trên-trái trang; đơn vị c/w/l):
-.\build\debug\src\pdfread.exe sample.pdf --select 1:72,150:300,200 --snapshot out.png
-.\build\debug\src\pdfread.exe sample.pdf --select 1:72,640:2:200,120 --snapshot out.png   # qua 2 trang
+.\build\debug\bin\pdfread.exe sample.pdf --select 1:72,150:300,200 --snapshot out.png
+.\build\debug\bin\pdfread.exe sample.pdf --select 1:72,640:2:200,120 --snapshot out.png   # qua 2 trang
+# Dịch thử không cần giao diện (stdin: mỗi dòng một câu):
+.\build\release\bin\pdfread-translate.exe --model models\HY-MT1.5-1.8B-Q4_K_M.gguf "The kernel schedules threads."
+.\build\release\bin\pdfread-translate.exe --model ... --context "câu xung quanh" --term "stress=ứng suất" "..."
+# Test với mô hình thật (mặc định bị ẩn):
+$env:PDFREAD_TEST_MODEL = "models\HY-MT1.5-1.8B-Q4_K_M.gguf"; .\build\release\bin\pdfread_tests.exe "[model]"
 ```
-Ở chế độ `--snapshot`, text của vùng chọn được ghi ra log dạng `SELECTION<<...>>`.
+Ở chế độ `--snapshot`, text của vùng chọn và bản dịch (nếu có mô hình) được ghi ra log dạng `SELECTION<<...>>`, `TRANSLATION<<...>>`.
 
 ## Cấu trúc thư mục
 
@@ -79,12 +94,13 @@ src/
   text/         làm sạch text, tách câu, ánh xạ vị trí, placeholder
   terminology/  trích thuật ngữ, glossary, phân loại lĩnh vực
   context/      ghép ngữ cảnh 3 tầng
-  translate/    interface Translator, backend llama.cpp
+  translate/    interface Translator, prompt HY-MT1.5, backend llama.cpp, luồng suy luận
   storage/      SQLite: cache, glossary, cài đặt
   util/         log, đo thời gian, hàng đợi, thread pool
 data/           domains.json, glossary/*.csv, fonts/
+models/         file GGUF (không commit)
 tests/          unit test (Catch2)
-tools/          build.ps1, eval/
+tools/          build.ps1, sample_pdf/, translate_cli/, eval/
 third_party/    llama.cpp (submodule, cố định v0.9.0)
 ```
 

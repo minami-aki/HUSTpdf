@@ -41,6 +41,17 @@ Bổ sung cho [CLAUDE.md](../CLAUDE.md). Mỗi mục ghi ngày chốt; muốn đ
 - **Vùng chọn nhiều trang:** trang giữa chọn trọn trang bằng điểm nằm trong ký tự đầu/cuối của trang (không dùng góc trang, vì với điểm ngoài mọi dòng MuPDF lấy dòng sau khi hòa khoảng cách → ở trang hai cột góc trên-trái bị hiểu là đầu cột phải).
 - Thứ tự đọc dùng nguyên thứ tự khối của MuPDF; kiểm tra/sắp lại bố cục nhiều cột để dành cho M4 (tầng 2).
 
+## 2026-11-13 — chi tiết kỹ thuật chốt trong M3
+
+- **llama.cpp v0.9.0 dạng DLL** (`GGML_BACKEND_DL` bắt buộc `BUILD_SHARED_LIBS`), chuẩn C++17 riêng cho submodule (ở C++20 chuỗi `u8"..."` thành `char8_t`), OpenMP tắt. Mọi exe/DLL ra `build/<preset>/bin`.
+- **CRT động `/MD` cho riêng llama.cpp/ggml.** Với `/MT` mỗi DLL có heap riêng mà registry backend của ggml truyền đối tượng C++ giữa các DLL → crash `0xC0000409` ngay khi nạp backend. Phần còn lại của app vẫn `/MT`; giao tiếp với llama chỉ qua C API nên trộn CRT an toàn. Hệ quả: cần `vcruntime140*.dll`/`msvcp140.dll` → **M6 phải đóng gói app-local hoặc yêu cầu VC Redist.**
+- **Prompt**: tự định dạng theo chat template trong GGUF (`<｜hy_begin▁of▁sentence｜><｜hy_User｜>…`), mặc định kết thúc bằng `<｜hy_place▁holder▁no▁8｜>` như ví dụ chính thức (`add_generation_prompt=False`); hai cách cho chất lượng tương đương khi thử 5 câu. Dịch thường dùng mẫu tiếng Anh với "Vietnamese"; mẫu thuật ngữ/ngữ cảnh chỉ có bản tiếng Trung nên dùng "越南语". Mẫu gộp thuật ngữ + ngữ cảnh là tự ghép (cần đánh giá ở M6).
+- **Tham số sinh** theo model card: top_k 20, top_p 0.6, repetition_penalty 1.05 (64 token gần nhất), temperature 0.7. (Metadata GGUF ghi top_p 0.8 — theo model card.) Không có seed cố định nên mỗi lần dịch có thể hơi khác.
+- **Không repack trọng số** (`use_extra_bufts = false`), lô 256 token, ngữ cảnh 2048: RAM riêng của tiến trình dịch ~367 MB thay vì ~1,2 GB; tốc độ sinh ~22 token/s không đổi; token đầu với câu thường 0,2–0,6 s, đoạn 300 token ~3 s. `--repack` để bật lại.
+- **Luồng suy luận mặc định** = luồng phần cứng / 2 (6 trên Ryzen 5 4600H), tối đa 8.
+- **Debounce** 250 ms sau khi thả chuột; đang kéo thì ẩn popup cũ và hủy yêu cầu. Giới hạn 2000 ký tự mỗi lần dịch; tạm nối các dòng bằng dấu cách (M4 sẽ làm sạch, tách câu).
+- Chất lượng ban đầu (chưa có lĩnh vực/glossary): câu thường dịch trôi nhưng hay diễn giải dài; thuật ngữ sai theo lĩnh vực ("stress" → "căng thẳng", "kernel" → "hạt nhân", "data hazard" → "vấn đề") — đúng phần việc của M4/M5.
+
 ## Thông tin tham chiếu
 
 - vcpkg baseline: `177e8175121536d414f405ed8b3099b325a42638` (2026-11-11).

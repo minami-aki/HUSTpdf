@@ -18,7 +18,8 @@ Pdfread phát hành theo AGPL-3.0. Dự án dùng (hoặc dự kiến dùng) cá
 | Dear ImGui 1.93 | MIT | giao diện | đang dùng (M1) |
 | nativefiledialog-extended 1.4 | zlib | hộp thoại mở file | đang dùng (M1) |
 | Noto Sans, Noto Sans Math (`data/fonts`, kèm `OFL.txt`) | SIL OFL-1.1 | font giao diện | đang dùng (M1) |
-| llama.cpp / ggml | MIT | suy luận mô hình dịch | đã thêm submodule (v0.9.0), dùng từ M3 |
+| llama.cpp / ggml (v0.9.0) | MIT | suy luận mô hình dịch (DLL cạnh exe) | đang dùng (M3) |
+| Microsoft Visual C++ Runtime (`vcruntime140*.dll`, `msvcp140.dll`) | Microsoft VC++ Redistributable license | cần cho các DLL llama.cpp/ggml (build `/MD`) | cần đóng gói app-local hoặc yêu cầu VC Redist (M6) |
 | nlohmann/json | MIT | đọc `data/domains.json`, cài đặt | dự kiến (M5) |
 | SQLite | Public domain | cache, glossary, cài đặt | dự kiến (M6) |
 | libcurl | curl (MIT-like) | tải mô hình lần đầu | dự kiến (M6) |
@@ -26,4 +27,4 @@ Pdfread phát hành theo AGPL-3.0. Dự án dùng (hoặc dự kiến dùng) cá
 
 ## Mô hình dịch
 
-Tencent HY-MT1.5-1.8B (GGUF) **không** được đóng gói trong bản cài. Người dùng tự tải về từ Hugging Face hoặc chọn file có sẵn; việc sử dụng mô hình tuân theo giấy phép do Tencent công bố trên model card.
+Tencent HY-MT1.5-1.8B (GGUF) **không** được đóng gói trong bản cài. Người dùng tự tải về từ Hugging Face hoặc chọn file có sẵn; việc sử dụng mô hình tuân theo **Tencent HY Community License Agreement** (không áp dụng tại EU, Vương quốc Anh, Hàn Quốc; có chính sách sử dụng được chấp nhận; không dùng đầu ra để cải thiện mô hình AI khác). Khi app tải mô hình hộ người dùng (M6) cần hiển thị và lưu kèm `License.txt` của mô hình.

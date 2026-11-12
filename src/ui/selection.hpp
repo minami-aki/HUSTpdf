@@ -3,6 +3,7 @@
 // nằm trên hai trang khác nhau. Từ đó tính tứ giác tô sáng và text của từng trang.
 // Thuần logic (không ImGui/GL); text của trang lấy qua callback để test được.
 
+#include <cstdint>
 #include <functional>
 #include <map>
 #include <string>
@@ -41,6 +42,8 @@ public:
     [[nodiscard]] std::pair<int, int> page_range() const noexcept;
     [[nodiscard]] const std::vector<pdf::Quad>* quads(int page) const;
     [[nodiscard]] const std::string& text() const noexcept { return text_; }
+    // Tăng mỗi khi text của vùng chọn thay đổi (kể cả khi bỏ chọn).
+    [[nodiscard]] std::uint64_t version() const noexcept { return version_; }
     // Đã có text của mọi trang trong vùng chọn.
     [[nodiscard]] bool complete() const noexcept { return !dirty_; }
 
@@ -53,6 +56,7 @@ private:
 
     std::map<int, std::vector<pdf::Quad>> quads_;
     std::string text_;
+    std::uint64_t version_ = 0;
 };
 
 }  // namespace pdfread::ui
