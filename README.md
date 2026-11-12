@@ -10,7 +10,7 @@ Trình đọc PDF khoa học – kỹ thuật, dịch Anh → Việt tức thờ
 |---|---|---|
 | M0 | Khung dự án: CMake + vcpkg, `util/`, unit test | xong |
 | M1 | Cửa sổ, mở PDF, render, cuộn liên tục, zoom | xong |
-| M2 | Bôi đen, tô sáng, lấy text | chưa |
+| M2 | Bôi đen, tô sáng, lấy text | xong |
 | M3 | llama.cpp + HY-MT1.5, popup dịch streaming | chưa |
 | M4 | Tầng 2: làm sạch, tách câu, ngữ cảnh | chưa |
 | M5 | Tầng 1: lĩnh vực, glossary, placeholder, hậu kiểm | chưa |
@@ -51,6 +51,10 @@ Lần build đầu vcpkg sẽ tải và biên dịch các thư viện phụ thu�
 | Ctrl + / Ctrl − / Ctrl 0 | Phóng to / thu nhỏ / 100% |
 | Ctrl 1 / Ctrl 2 | Vừa chiều rộng / vừa trang |
 | Kéo chuột giữa | Di chuyển trang |
+| Kéo chuột trái | Bôi đen (qua được nhiều trang; kéo ra mép thì tự cuộn) |
+| Nhấn đúp / nhấn ba lần | Chọn từ / chọn dòng (giữ chuột kéo tiếp để mở rộng theo từ / dòng) |
+| Shift + nhấn | Mở rộng vùng chọn tới điểm nhấn |
+| Ctrl+C, Esc | Sao chép vùng chọn, bỏ chọn |
 
 `--timing` ghi thời gian mở file, dựng display list, render từng tile ra log (bản Debug có console).
 
@@ -59,7 +63,11 @@ Công cụ kiểm thử:
 ```powershell
 .\build\debug\tests\make_sample_pdf.exe sample.pdf 8          # tạo PDF mẫu 12 trang
 .\build\debug\src\pdfread.exe sample.pdf --snapshot out.png   # chờ render xong, chụp cửa sổ, thoát
+# Đặt sẵn vùng chọn (trang từ 1, tọa độ point từ góc trên-trái trang; đơn vị c/w/l):
+.\build\debug\src\pdfread.exe sample.pdf --select 1:72,150:300,200 --snapshot out.png
+.\build\debug\src\pdfread.exe sample.pdf --select 1:72,640:2:200,120 --snapshot out.png   # qua 2 trang
 ```
+Ở chế độ `--snapshot`, text của vùng chọn được ghi ra log dạng `SELECTION<<...>>`.
 
 ## Cấu trúc thư mục
 

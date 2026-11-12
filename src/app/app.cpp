@@ -41,7 +41,8 @@ App::App(GLFWwindow* window, const pdf::RootContext& root, AppOptions options)
           .on_stop = [](std::size_t) { pdf::detach_thread(); },
       }),
       render_(root, 0, [] { glfwPostEmptyEvent(); }),
-      viewer_(render_, textures_) {
+      text_service_(root, [] { glfwPostEmptyEvent(); }),
+      viewer_(render_, text_service_, textures_) {
     glfwSetWindowUserPointer(window_, this);
     glfwSetDropCallback(window_, &App::on_drop);
     glfwSetWindowRefreshCallback(window_, &App::on_refresh);
@@ -250,7 +251,12 @@ void App::draw_status_bar() {
     ImGui::SetCursorPosX(pad);
     ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 1.0f * ui_scale_);
     ImGui::AlignTextToFramePadding();
-    if (!status_.empty()) {
+    if (viewer_.has_selection()) {
+        const std::string& text = viewer_.selection_text();
+        ImGui::TextUnformatted(std::format("Đã chọn {} ký tự: “{}”   ·   Ctrl+C: sao chép", utf8_length(text),
+                                           utf8_preview(text, 70))
+                                   .c_str());
+    } else if (!status_.empty()) {
         if (status_is_error_) ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.75f, 0.1f, 0.1f, 1.0f));
         ImGui::TextUnformatted(status_.c_str());
         if (status_is_error_) ImGui::PopStyleColor();
@@ -269,6 +275,10 @@ void App::handle_shortcuts() {
     if (io.WantTextInput) return;
     if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_O)) open_dialog();
     if (!viewer_.document()) return;
+    if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_C) && viewer_.has_selection()) {
+        ImGui::SetClipboardText(viewer_.selection_text().c_str());
+        log::debug("Đã sao chép {} ký tự", utf8_length(viewer_.selection_text()));
+    }
     if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_Equal) ||
         ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_KeypadAdd)) {
         viewer_.zoom_in();
@@ -326,6 +336,7 @@ void App::poll_open_results() {
         if (!initial_view_applied_) {
             initial_view_applied_ = true;
             if (options_.start_page) viewer_.go_to_page(*options_.start_page);
+            if (options_.select) viewer_.select(options_.select->a, options_.select->b, options_.select->unit);
         }
     }
 }
@@ -337,7 +348,8 @@ void App::set_status(std::string text, bool is_error) {
 
 void App::update_snapshot(int fb_width, int fb_height) {
     // Chụp khi tài liệu đã mở và mọi tile nhìn thấy đã render xong, ổn định vài frame.
-    const bool ready = viewer_.document() && viewer_.fully_rendered() && !render_.busy();
+    const bool ready = viewer_.document() && viewer_.fully_rendered() && !render_.busy() &&
+                       (!options_.select || viewer_.selection_complete());
     snapshot_stable_frames_ = ready ? snapshot_stable_frames_ + 1 : 0;
     const bool timed_out = glfwGetTime() - start_time_ > kSnapshotTimeoutSeconds;
     const bool failed_open = !loading_ && !viewer_.document() && frame_ > 2;
@@ -356,6 +368,7 @@ void App::update_snapshot(int fb_width, int fb_height) {
                         dst + static_cast<std::size_t>(y) * static_cast<std::size_t>(pix->stride()));
         }
         pdf::save_png(*pix, options_.snapshot_path);
+        if (options_.select) log::info("SELECTION<<{}>>", viewer_.selection_text());
         log::info("Đã lưu ảnh chụp {} ({}x{})", path_to_utf8(options_.snapshot_path), fb_width, fb_height);
         exit_code_ = (timed_out || failed_open) ? 2 : 0;
         if (timed_out) log::warn("Hết thời gian chờ render, ảnh chụp có thể chưa đủ");

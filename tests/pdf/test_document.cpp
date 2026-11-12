@@ -16,38 +16,19 @@
 #include "pdf/document.hpp"
 #include "pdf/render_service.hpp"
 #include "pdf/tiles.hpp"
+#include "support/mupdf_fixture.hpp"
 #include "support/sample_pdf.hpp"
 #include "util/log.hpp"
 
 using Catch::Approx;
 using namespace pdfread;
 using namespace std::chrono_literals;
+using testing::MuPdfScope;
+using testing::TempFile;
 
 namespace {
 
-pdf::RootContext& root() {
-    static pdf::RootContext r;
-    return r;
-}
-
-// Gắn context MuPDF cho luồng test trong suốt một TEST_CASE.
-struct MuPdfScope {
-    MuPdfScope() { pdf::attach_thread(root()); }
-    ~MuPdfScope() { pdf::detach_thread(); }
-    MuPdfScope(const MuPdfScope&) = delete;
-    MuPdfScope& operator=(const MuPdfScope&) = delete;
-};
-
-struct TempFile {
-    std::filesystem::path path;
-    explicit TempFile(const std::string& name) : path(std::filesystem::temp_directory_path() / name) {}
-    ~TempFile() {
-        std::error_code ec;
-        std::filesystem::remove(path, ec);
-    }
-    TempFile(const TempFile&) = delete;
-    TempFile& operator=(const TempFile&) = delete;
-};
+pdf::RootContext& root() { return testing::mupdf_root(); }
 
 // Trang 0: A4 dọc, ô vuông đen 100..200 (tọa độ PDF, gốc dưới-trái).
 // Trang 1: A4 ngang. Trang 2: 200x300 với /Rotate 90 -> hiển thị 300x200.

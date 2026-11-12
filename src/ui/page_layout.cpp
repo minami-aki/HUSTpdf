@@ -96,4 +96,14 @@ std::pair<double, double> PageLayout::to_content(const PagePoint& p) const {
     return {r.x + p.x * upp_, r.y + p.y * upp_};
 }
 
+PagePoint screen_to_page(const PageLayout& layout, const ViewTransform& view, double sx, double sy) {
+    const auto [cx, cy] = view.to_content(sx, sy);
+    return layout.to_page(cx, cy);
+}
+
+std::pair<double, double> page_to_screen(const PageLayout& layout, const ViewTransform& view, const PagePoint& p) {
+    const auto [cx, cy] = layout.to_content(p);
+    return view.to_screen(cx, cy);
+}
+
 }  // namespace pdfread::ui

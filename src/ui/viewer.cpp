@@ -7,6 +7,7 @@
 #include <imgui_internal.h>  // ImGuiWindow::InnerRect: vùng nhìn thật, không gồm thanh cuộn
 
 #include "pdf/tiles.hpp"
+#include "util/log.hpp"
 
 namespace pdfread::ui {
 namespace {
@@ -18,6 +19,10 @@ constexpr std::array kZoomSteps{0.1, 0.25, 0.33, 0.5, 0.67, 0.75, 0.8, 0.9, 1.0,
 constexpr ImU32 kBackground = IM_COL32(0xD5, 0xD8, 0xDC, 0xFF);
 constexpr ImU32 kPageColor = IM_COL32(0xFF, 0xFF, 0xFF, 0xFF);
 constexpr ImU32 kShadowColor = IM_COL32(0x00, 0x00, 0x00, 0x30);
+constexpr ImU32 kSelectionColor = IM_COL32(0x2F, 0x7D, 0xF6, 0x55);
+
+constexpr std::size_t kTextCacheCapacity = 64;  // số trang giữ text
+constexpr int kMaxSelectionTextPages = 50;      // trích text tối đa cho vùng chọn nhiều trang
 
 float snap(float v, float fb_scale) { return std::floor(v * fb_scale + 0.5f) / fb_scale; }
 
@@ -25,12 +30,16 @@ ImTextureID to_texture_id(unsigned int tex) { return static_cast<ImTextureID>(st
 
 }  // namespace
 
-Viewer::Viewer(pdf::RenderService& render, TextureCache& textures) : render_(render), textures_(textures) {}
+Viewer::Viewer(pdf::RenderService& render, pdf::TextService& text, TextureCache& textures)
+    : render_(render), text_service_(text), textures_(textures) {}
 
 void Viewer::set_document(std::shared_ptr<pdf::Document> doc) {
     doc_ = std::move(doc);
     textures_.clear();
+    texts_.clear();
+    selection_.clear();
     render_.set_document(doc_);
+    text_service_.set_document(doc_);
     layout_ready_ = false;
     scale_q_ = 0;
     scroll_x_ = 0;
@@ -81,8 +90,18 @@ void Viewer::go_to_page(int index) {
     pending_page_ = std::clamp(index, 0, doc_->page_count() - 1);
 }
 
+void Viewer::select(const SelectionPoint& a, const SelectionPoint& b, pdf::SelectUnit unit) {
+    selection_.begin(a, unit);
+    selection_.extend(b);
+    selection_.end_drag();
+}
+
 double Viewer::x_offset() const noexcept {
     return std::max(0.0, (view_w_ - layout_.content_width()) / 2);
+}
+
+ViewTransform Viewer::make_view(const ImVec2& origin) const noexcept {
+    return ViewTransform{origin.x, origin.y, scroll_x_, scroll_y_, x_offset()};
 }
 
 void Viewer::clamp_scroll() {
@@ -98,6 +117,10 @@ void Viewer::receive_results(std::uint64_t frame) {
     for (pdf::TileResult& r : render_.take_results()) {
         if (!doc_ || r.key.doc != doc_->id()) continue;  // tài liệu cũ: pixmap tự hủy
         textures_.insert(r.key, r.pixmap.get(), frame);
+    }
+    for (pdf::TextResult& r : text_service_.take_results()) {
+        if (!doc_ || r.doc != doc_->id() || !r.text) continue;
+        texts_[r.page] = TextEntry{std::move(r.text), frame};
     }
 }
 
@@ -186,6 +209,7 @@ void Viewer::handle_input(const ImVec2& origin, float ui_scale) {
 
     // Bàn phím: chỉ khi không gõ chữ và không có popup.
     if (io.WantTextInput || ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId) || io.KeyCtrl) return;
+    if (ImGui::IsKeyPressed(ImGuiKey_Escape)) selection_.clear();
     const double page_step = std::max(line, view_h_ - line);
     const bool can_scroll_x = layout_.content_width() > view_w_ + 0.5;
     struct Binding {
@@ -231,6 +255,97 @@ void Viewer::handle_input(const ImVec2& origin, float ui_scale) {
     }
 }
 
+bool Viewer::handle_selection_input(const ImRect& inner) {
+    const ImGuiIO& io = ImGui::GetIO();
+    const ImVec2 mouse = io.MousePos;
+    const bool in_view = inner.Contains(mouse);  // không tính thanh cuộn
+    const bool hovered = ImGui::IsWindowHovered() && in_view;
+    bool more = false;
+
+    auto point_at = [&](ImVec2 s) {
+        const PagePoint p = screen_to_page(layout_, view_, s.x, s.y);
+        return SelectionPoint{p.page, {static_cast<float>(p.x), static_cast<float>(p.y)}};
+    };
+
+    if (hovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+        const SelectionPoint p = point_at(mouse);
+        if (io.KeyShift && selection_.has_anchor()) {
+            selection_.extend(p);
+        } else {
+            // Một lần nhấn: theo ký tự; nhấn đúp: theo từ; nhấn ba lần: theo dòng.
+            const int clicks = io.MouseClickedCount[ImGuiMouseButton_Left];
+            const pdf::SelectUnit unit = clicks >= 3   ? pdf::SelectUnit::Lines
+                                         : clicks == 2 ? pdf::SelectUnit::Words
+                                                       : pdf::SelectUnit::Chars;
+            selection_.begin(p, unit);
+        }
+    }
+
+    if (selection_.dragging()) {
+        if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+            selection_.end_drag();
+            if (selection_.active()) log::debug("Vùng chọn: {}", selection_.text());
+        } else {
+            // Kéo ra ngoài vùng nhìn: tự cuộn, tốc độ theo khoảng cách tới mép.
+            auto overshoot = [](float v, float lo, float hi) { return v < lo ? v - lo : (v > hi ? v - hi : 0.0f); };
+            const float dx = overshoot(mouse.x, inner.Min.x, inner.Max.x);
+            const float dy = overshoot(mouse.y, inner.Min.y, inner.Max.y);
+            if (dx != 0.0f || dy != 0.0f) {
+                scroll_x_ += dx * 0.25;
+                scroll_y_ += dy * 0.25;
+                pending_scroll_ = true;
+                more = true;
+            }
+            const ImVec2 clamped(std::clamp(mouse.x, inner.Min.x, inner.Max.x - 1.0f),
+                                 std::clamp(mouse.y, inner.Min.y, inner.Max.y - 1.0f));
+            selection_.extend(point_at(clamped));
+        }
+    }
+
+    // Con trỏ dạng chữ I khi rê trên trang.
+    if (hovered && !panning_) {
+        const PagePoint p = screen_to_page(layout_, view_, mouse.x, mouse.y);
+        if (p.page >= 0) {
+            const PageSize& s = layout_.page_size(p.page);
+            if (p.x >= 0 && p.y >= 0 && p.x <= s.w && p.y <= s.h) ImGui::SetMouseCursor(ImGuiMouseCursor_TextInput);
+        }
+    }
+    return more;
+}
+
+void Viewer::request_text(int first_visible, int last_visible, std::uint64_t frame) {
+    std::vector<int> wanted;
+    auto want = [&](int page) {
+        if (page < 0 || page >= page_count()) return;
+        if (auto it = texts_.find(page); it != texts_.end()) {
+            it->second.last_used = frame;
+            return;
+        }
+        if (std::find(wanted.begin(), wanted.end(), page) == wanted.end()) wanted.push_back(page);
+    };
+    for (int p = first_visible; p <= last_visible; ++p) want(p);
+
+    // Trang thuộc vùng chọn (giới hạn số trang để vùng chọn rất dài không làm nghẽn).
+    const auto [s0, s1] = selection_.page_range();
+    if (s0 >= 0) {
+        for (int p = s0; p <= std::min(s1, s0 + kMaxSelectionTextPages - 1); ++p) want(p);
+    }
+    text_service_.request(wanted);
+
+    // Giới hạn cache: bỏ trang dùng lâu nhất, trừ trang dùng ở frame này.
+    if (texts_.size() > kTextCacheCapacity) {
+        std::vector<std::pair<std::uint64_t, int>> old;
+        for (const auto& [page, e] : texts_) {
+            if (e.last_used != frame) old.emplace_back(e.last_used, page);
+        }
+        std::sort(old.begin(), old.end());
+        for (const auto& [_, page] : old) {
+            if (texts_.size() <= kTextCacheCapacity) break;
+            texts_.erase(page);
+        }
+    }
+}
+
 bool Viewer::draw(ImVec2 size, float ui_scale, float fb_scale, std::uint64_t frame) {
     bool more = false;
     receive_results(frame);
@@ -261,6 +376,7 @@ bool Viewer::draw(ImVec2 size, float ui_scale, float fb_scale, std::uint64_t fra
         missing_visible_ = true;
         wanted_.clear();
         render_.request({});
+        text_service_.request({});
         ImGui::EndChild();
         ImGui::PopStyleColor();
         return more;
@@ -271,21 +387,31 @@ bool Viewer::draw(ImVec2 size, float ui_scale, float fb_scale, std::uint64_t fra
         scroll_y_ = ImGui::GetScrollY();
     }
     handle_input(origin, ui_scale);
+    clamp_scroll();
+    view_ = make_view(origin);
+    more |= handle_selection_input(inner);
     if (pending_scroll_) {
         clamp_scroll();
         ImGui::SetScrollX(static_cast<float>(scroll_x_));
         ImGui::SetScrollY(static_cast<float>(scroll_y_));
         pending_scroll_ = false;
         more = true;  // ImGui áp dụng cuộn ở frame sau
+        view_ = make_view(origin);
     }
 
     current_page_ = std::max(0, layout_.page_near(scroll_y_ + view_h_ * 0.4));
+
+    const auto [first, last] = layout_.pages_in(scroll_y_, scroll_y_ + view_h_);
+    request_text(first, last, frame);
+    selection_.update([this](int page) -> pdf::TextPagePtr {
+        auto it = texts_.find(page);
+        return it == texts_.end() ? nullptr : it->second.text;
+    });
 
     // Vẽ các trang trong vùng nhìn và ghi lại tile còn thiếu.
     wanted_.clear();
     missing_visible_ = false;
     ImDrawList* dl = ImGui::GetWindowDrawList();
-    const auto [first, last] = layout_.pages_in(scroll_y_, scroll_y_ + view_h_);
     for (int i = first; i <= last; ++i) draw_page(dl, i, origin, fb_scale, frame);
     collect_prefetch(fb_scale);
 
@@ -334,27 +460,21 @@ void Viewer::draw_page(ImDrawList* dl, int page, const ImVec2& origin, float fb_
 
     // Tile của tỉ lệ khác (ví dụ trước khi zoom) phóng to/thu nhỏ tạm trong lúc chờ.
     if (!complete) {
-        std::vector<std::pair<int, const TileTexture*>> fallback;
-        std::vector<pdf::TileKey> fallback_keys;
+        std::vector<std::pair<pdf::TileKey, const TileTexture*>> fallback;
         textures_.for_each_of_page(doc_id, page, [&](const pdf::TileKey& key, TileTexture& tex) {
             if (key.scale_q == scale_q_ || tex.texture == 0) return;
             tex.last_used = frame;
-            fallback.emplace_back(key.scale_q, &tex);
-            fallback_keys.push_back(key);
+            fallback.emplace_back(key, &tex);
         });
-        std::vector<std::size_t> order(fallback.size());
-        for (std::size_t i = 0; i < order.size(); ++i) order[i] = i;
-        std::sort(order.begin(), order.end(),
-                  [&](std::size_t a, std::size_t b) { return fallback[a].first < fallback[b].first; });
-        for (std::size_t idx : order) {
-            const pdf::TileKey& key = fallback_keys[idx];
-            const TileTexture& tex = *fallback[idx].second;
+        std::sort(fallback.begin(), fallback.end(),
+                  [](const auto& a, const auto& b) { return a.first.scale_q < b.first.scale_q; });
+        for (const auto& [key, tex] : fallback) {
             const double units_per_px = layout_.units_per_pt() / pdf::scale_from_q(key.scale_q);
             const ImVec2 a(p0.x + static_cast<float>(key.col * pdf::kTileSize * units_per_px),
                            p0.y + static_cast<float>(key.row * pdf::kTileSize * units_per_px));
-            const ImVec2 b(a.x + static_cast<float>(tex.width * units_per_px),
-                           a.y + static_cast<float>(tex.height * units_per_px));
-            dl->AddImage(to_texture_id(tex.texture), a, b);
+            const ImVec2 b(a.x + static_cast<float>(tex->width * units_per_px),
+                           a.y + static_cast<float>(tex->height * units_per_px));
+            dl->AddImage(to_texture_id(tex->texture), a, b);
         }
     }
 
@@ -378,6 +498,16 @@ void Viewer::draw_page(ImDrawList* dl, int page, const ImVec2& origin, float fb_
             }
         }
     }
+
+    draw_selection(dl, page, p0);
+}
+
+void Viewer::draw_selection(ImDrawList* dl, int page, const ImVec2& page_origin) const {
+    const std::vector<pdf::Quad>* quads = selection_.quads(page);
+    if (quads == nullptr) return;
+    const float upp = static_cast<float>(layout_.units_per_pt());
+    auto at = [&](const pdf::PointF& p) { return ImVec2(page_origin.x + p.x * upp, page_origin.y + p.y * upp); };
+    for (const pdf::Quad& q : *quads) dl->AddQuadFilled(at(q.ul), at(q.ur), at(q.lr), at(q.ll), kSelectionColor);
 }
 
 void Viewer::collect_prefetch(float fb_scale) {

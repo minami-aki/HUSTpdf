@@ -4,11 +4,14 @@
 //   pdfread [file.pdf] [--page N] [--zoom 150 | --fit-page] [--timing] [--verbose]
 //   pdfread file.pdf --snapshot out.png   (kiểm thử: chờ render xong, chụp cửa sổ, thoát)
 
+#include <charconv>
 #include <cstdio>
 #include <cstdlib>
 #include <exception>
 #include <filesystem>
+#include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #ifdef _WIN32
@@ -83,6 +86,44 @@ std::filesystem::path find_data_dir() {
 
 void on_glfw_error(int code, const char* message) { log::error("GLFW {}: {}", code, message); }
 
+// --select "P:x,y:x,y[:c|w|l]" hoặc "P:x,y:Q:x,y[:c|w|l]" — trang đánh số từ 1, tọa độ
+// theo point từ góc trên-trái trang; đơn vị: ký tự (mặc định), từ, dòng.
+std::optional<app::SelectSpec> parse_select(std::string_view s) {
+    std::vector<std::string_view> parts;
+    for (std::size_t start = 0;;) {
+        const std::size_t colon = s.find(':', start);
+        parts.push_back(s.substr(start, colon == std::string_view::npos ? std::string_view::npos : colon - start));
+        if (colon == std::string_view::npos) break;
+        start = colon + 1;
+    }
+    auto parse_int = [](std::string_view v, int& out) {
+        return std::from_chars(v.data(), v.data() + v.size(), out).ec == std::errc{};
+    };
+    auto parse_point = [](std::string_view v, pdf::PointF& out) {
+        const std::size_t comma = v.find(',');
+        if (comma == std::string_view::npos) return false;
+        return std::from_chars(v.data(), v.data() + comma, out.x).ec == std::errc{} &&
+               std::from_chars(v.data() + comma + 1, v.data() + v.size(), out.y).ec == std::errc{};
+    };
+
+    app::SelectSpec spec;
+    std::size_t i = 0;
+    int page = 0;
+    if (parts.size() < 3 || !parse_int(parts[i++], page) || !parse_point(parts[i++], spec.a.pt)) return std::nullopt;
+    spec.a.page = page - 1;
+    spec.b.page = spec.a.page;
+    if (parts[i].find(',') == std::string_view::npos) {
+        if (!parse_int(parts[i++], page)) return std::nullopt;
+        spec.b.page = page - 1;
+    }
+    if (i >= parts.size() || !parse_point(parts[i++], spec.b.pt)) return std::nullopt;
+    if (i < parts.size()) {
+        if (parts[i] == "w") spec.unit = pdf::SelectUnit::Words;
+        else if (parts[i] == "l") spec.unit = pdf::SelectUnit::Lines;
+    }
+    return spec;
+}
+
 int run(const std::vector<std::string>& args) {
     app::AppOptions options;
     for (std::size_t i = 1; i < args.size(); ++i) {
@@ -106,6 +147,10 @@ int run(const std::vector<std::string>& args) {
             options.zoom = std::atof(next().c_str()) / 100.0;
         } else if (a == "--fit-page") {
             options.fit_page = true;
+        } else if (a == "--select") {
+            const std::string& spec = next();
+            options.select = parse_select(spec);
+            if (!options.select) log::warn("--select không hợp lệ: {}", spec);
         } else if (!a.starts_with("--")) {
             options.open_path = path_from_utf8(a);
         } else {

@@ -33,6 +33,14 @@ Bổ sung cho [CLAUDE.md](../CLAUDE.md). Mỗi mục ghi ngày chốt; muốn đ
 - Hệ quả chấp nhận: PDF tiếng Trung/Nhật/Hàn không nhúng font sẽ hiện ô vuông.
 - Kết quả: `pdfread.exe` (release) giảm từ 39,4 MB xuống 15,75 MB. Phần lớn còn lại là font Noto không phải CJK (~12 MB); có thể bỏ thêm bằng `TOFU_NOTO` nếu cần.
 
+## 2026-11-13 — chi tiết kỹ thuật chốt trong M2
+
+- **Text có cấu trúc** dựng từ display list đã cache (không đọc lại trang) với `FZ_STEXT_DEHYPHENATE | FZ_STEXT_MEDIABOX_CLIP`, trên một luồng nền riêng (`TextService`, 1 luồng), cho các trang đang nhìn và các trang thuộc vùng chọn (tối đa 50). Cache 64 trang trên UI thread.
+- **Bỏ gạch nối cuối dòng tự làm:** MuPDF 1.28 chỉ đánh dấu dòng "joined", còn `fz_copy_selection` vẫn giữ gạch nối. Quy tắc trong `pdf::join_hyphenated_lines`: dòng sau bắt đầu bằng chữ thường thì bỏ gạch nối ("inter-national" → "international"); chữ hoa/số thì giữ gạch nối ("Runge-Kutta"); soft hyphen luôn bỏ; gạch đứng sau dấu cách là gạch ngang, giữ nguyên. Hạn chế: "self-⏎contained" bị nối thành "selfcontained" — để M4 xử lý bằng danh sách từ.
+- **"Từ"** khi nhấn đúp là theo định nghĩa của MuPDF (ngăn bởi khoảng trắng), nên cụm có gạch nối như "proportional-integral-derivative" là một từ.
+- **Vùng chọn nhiều trang:** trang giữa chọn trọn trang bằng điểm nằm trong ký tự đầu/cuối của trang (không dùng góc trang, vì với điểm ngoài mọi dòng MuPDF lấy dòng sau khi hòa khoảng cách → ở trang hai cột góc trên-trái bị hiểu là đầu cột phải).
+- Thứ tự đọc dùng nguyên thứ tự khối của MuPDF; kiểm tra/sắp lại bố cục nhiều cột để dành cho M4 (tầng 2).
+
 ## Thông tin tham chiếu
 
 - vcpkg baseline: `177e8175121536d414f405ed8b3099b325a42638` (2026-11-11).

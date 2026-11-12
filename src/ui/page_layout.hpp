@@ -31,6 +31,31 @@ struct PagePoint {
     double y = 0;  // point
 };
 
+// Ánh xạ tọa độ màn hình (đơn vị ImGui, tuyệt đối trong cửa sổ) <-> content.
+// DPI đã nằm trong units_per_pt của PageLayout, nên ở đây chỉ còn gốc vùng nhìn,
+// vị trí cuộn và độ dịch căn giữa.
+struct ViewTransform {
+    double origin_x = 0;  // góc trên-trái vùng nhìn trên màn hình
+    double origin_y = 0;
+    double scroll_x = 0;
+    double scroll_y = 0;
+    double offset_x = 0;  // dịch ngang khi tài liệu hẹp hơn vùng nhìn (căn giữa)
+
+    [[nodiscard]] std::pair<double, double> to_content(double sx, double sy) const noexcept {
+        return {sx - origin_x + scroll_x - offset_x, sy - origin_y + scroll_y};
+    }
+    [[nodiscard]] std::pair<double, double> to_screen(double cx, double cy) const noexcept {
+        return {cx + offset_x - scroll_x + origin_x, cy - scroll_y + origin_y};
+    }
+};
+
+class PageLayout;
+
+// Màn hình -> điểm trên trang gần nhất (point), và ngược lại.
+[[nodiscard]] PagePoint screen_to_page(const PageLayout& layout, const ViewTransform& view, double sx, double sy);
+[[nodiscard]] std::pair<double, double> page_to_screen(const PageLayout& layout, const ViewTransform& view,
+                                                       const PagePoint& p);
+
 class PageLayout {
 public:
     void set_pages(std::vector<PageSize> pages);

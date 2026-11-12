@@ -1,18 +1,25 @@
 #pragma once
 // Vùng xem PDF: cuộn liên tục, zoom, vẽ tile từ TextureCache và yêu cầu render
-// tile còn thiếu (vùng nhìn trước, rồi tới vùng lân cận để cuộn mượt).
+// tile còn thiếu (vùng nhìn trước, rồi tới vùng lân cận để cuộn mượt); trích text
+// các trang đang nhìn và xử lý bôi đen.
 
 #include <cstdint>
 #include <memory>
 #include <optional>
+#include <string>
+#include <unordered_map>
 #include <vector>
 
 #include <imgui.h>
 
 #include "pdf/document.hpp"
 #include "pdf/render_service.hpp"
+#include "pdf/text_service.hpp"
 #include "ui/page_layout.hpp"
+#include "ui/selection.hpp"
 #include "ui/texture_cache.hpp"
+
+struct ImRect;
 
 namespace pdfread::ui {
 
@@ -23,7 +30,7 @@ public:
     static constexpr double kMinZoom = 0.1;
     static constexpr double kMaxZoom = 8.0;
 
-    Viewer(pdf::RenderService& render, TextureCache& textures);
+    Viewer(pdf::RenderService& render, pdf::TextService& text, TextureCache& textures);
 
     void set_document(std::shared_ptr<pdf::Document> doc);
     [[nodiscard]] const std::shared_ptr<pdf::Document>& document() const noexcept { return doc_; }
@@ -44,6 +51,14 @@ public:
     [[nodiscard]] int current_page() const noexcept { return current_page_; }
     [[nodiscard]] int page_count() const noexcept { return doc_ ? doc_->page_count() : 0; }
 
+    // Vùng bôi đen.
+    [[nodiscard]] bool has_selection() const noexcept { return selection_.active(); }
+    [[nodiscard]] const std::string& selection_text() const noexcept { return selection_.text(); }
+    [[nodiscard]] bool selection_complete() const noexcept { return selection_.complete(); }
+    void clear_selection() { selection_.clear(); }
+    // Đặt vùng chọn bằng tọa độ trang (dùng cho chế độ kiểm thử --select).
+    void select(const SelectionPoint& a, const SelectionPoint& b, pdf::SelectUnit unit);
+
     // Mọi tile đang nhìn thấy đã có ở tỉ lệ hiện tại.
     [[nodiscard]] bool fully_rendered() const noexcept { return doc_ && layout_ready_ && !missing_visible_; }
 
@@ -52,17 +67,26 @@ private:
         pdf::TileKey key;
         double priority;  // nhỏ = gấp
     };
+    struct TextEntry {
+        pdf::TextPagePtr text;
+        std::uint64_t last_used = 0;
+    };
 
     void receive_results(std::uint64_t frame);
     bool update_layout(float ui_scale, float fb_scale);
     void handle_input(const ImVec2& origin, float ui_scale);
+    bool handle_selection_input(const ImRect& inner);
     void zoom_at(ImVec2 anchor, double zoom);
     void clamp_scroll();
     [[nodiscard]] double x_offset() const noexcept;
+    [[nodiscard]] ViewTransform make_view(const ImVec2& origin) const noexcept;
     void draw_page(ImDrawList* dl, int page, const ImVec2& origin, float fb_scale, std::uint64_t frame);
+    void draw_selection(ImDrawList* dl, int page, const ImVec2& page_origin) const;
     void collect_prefetch(float fb_scale);
+    void request_text(int first_visible, int last_visible, std::uint64_t frame);
 
     pdf::RenderService& render_;
+    pdf::TextService& text_service_;
     TextureCache& textures_;
     std::shared_ptr<pdf::Document> doc_;
 
@@ -81,9 +105,13 @@ private:
     std::optional<int> pending_page_;
     bool panning_ = false;
     int current_page_ = 0;
+    ViewTransform view_;
 
     bool missing_visible_ = false;
     std::vector<Wanted> wanted_;
+
+    std::unordered_map<int, TextEntry> texts_;
+    Selection selection_;
 };
 
 }  // namespace pdfread::ui

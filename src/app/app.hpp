@@ -13,6 +13,7 @@
 
 #include "pdf/document.hpp"
 #include "pdf/render_service.hpp"
+#include "pdf/text_service.hpp"
 #include "ui/texture_cache.hpp"
 #include "ui/viewer.hpp"
 #include "util/concurrent_queue.hpp"
@@ -26,12 +27,20 @@ class RootContext;
 
 namespace pdfread::app {
 
+// Vùng chọn đặt sẵn (chế độ kiểm thử --select).
+struct SelectSpec {
+    ui::SelectionPoint a;
+    ui::SelectionPoint b;
+    pdf::SelectUnit unit = pdf::SelectUnit::Chars;
+};
+
 struct AppOptions {
     std::filesystem::path open_path;      // mở ngay khi khởi động
     std::filesystem::path snapshot_path;  // chế độ kiểm thử: chụp màn hình rồi thoát
     std::optional<int> start_page;        // 0-based
     std::optional<double> zoom;           // 1.0 = 100%
     bool fit_page = false;
+    std::optional<SelectSpec> select;
     std::filesystem::path font_dir;
 };
 
@@ -76,6 +85,7 @@ private:
     ConcurrentQueue<OpenResult> open_results_;
     ThreadPool loader_;  // mở tài liệu ở nền (1 luồng)
     pdf::RenderService render_;
+    pdf::TextService text_service_;
     ui::TextureCache textures_;
     ui::Viewer viewer_;
 

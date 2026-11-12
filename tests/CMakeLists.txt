@@ -12,8 +12,10 @@ add_executable(pdfread_tests
     util/test_thread_pool.cpp
     util/test_log_timer.cpp
     ui/test_page_layout.cpp
+    ui/test_view_transform.cpp
     pdf/test_tiles.cpp
     pdf/test_document.cpp
+    pdf/test_text_page.cpp
 )
 target_link_libraries(pdfread_tests PRIVATE
     pdfread_ui pdfread_test_support pdfread_options Catch2::Catch2WithMain)

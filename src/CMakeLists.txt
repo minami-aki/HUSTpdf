@@ -22,6 +22,8 @@ add_library(pdfread_pdf STATIC
     pdf/context.cpp
     pdf/document.cpp
     pdf/render_service.cpp
+    pdf/text_page.cpp
+    pdf/text_service.cpp
 )
 target_link_libraries(pdfread_pdf
     PUBLIC pdfread_util
@@ -32,6 +34,7 @@ target_link_libraries(pdfread_pdf
 add_library(pdfread_ui STATIC
     ui/fonts.cpp
     ui/page_layout.cpp
+    ui/selection.cpp
     ui/texture_cache.cpp
     ui/viewer.cpp
 )
