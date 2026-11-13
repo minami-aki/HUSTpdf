@@ -63,6 +63,7 @@ struct AppOptions {
     bool include_context = false;                         // thêm câu xung quanh vào prompt (thử nghiệm)
     bool open_glossary = false;                           // mở sẵn cửa sổ glossary
     bool open_model_window = false;                       // mở sẵn cửa sổ "Mô hình dịch"
+    bool debug_frames = false;                            // chẩn đoán: ghi thống kê từng khung hình ra log
     bool use_cache = true;                                // cache bản dịch trong SQLite
     std::filesystem::path database_path;                  // rỗng: local_data_dir()/pdfread.db
 };
@@ -189,6 +190,11 @@ private:
     std::string model_status_ = "chưa có";
 
     std::uint64_t frame_ = 0;
+    // Chống chớp trắng: khung mới có trang còn trống (tile chưa render) thì giữ khung đầy đủ đang
+    // hiển thị thêm tối đa kHoldBlankSeconds thay vì đưa nền trắng lên màn hình.
+    bool last_presented_complete_ = false;
+    double hold_since_ = 0;
+    bool held_frame_ = false;
     float ui_scale_ = 1.0f;
     std::optional<float> pending_scale_;
     bool in_frame_ = false;

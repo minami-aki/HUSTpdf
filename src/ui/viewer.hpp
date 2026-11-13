@@ -81,6 +81,8 @@ public:
 
     // Mọi tile đang nhìn thấy đã có ở tỉ lệ hiện tại.
     [[nodiscard]] bool fully_rendered() const noexcept { return doc_ && layout_ready_ && !missing_visible_; }
+    // Khung vừa vẽ có trang lộ nền trắng (tile chưa render, không có tile tỉ lệ khác để vẽ tạm).
+    [[nodiscard]] bool has_blank_tiles() const noexcept { return blank_visible_; }
 
 private:
     struct Wanted {
@@ -128,6 +130,7 @@ private:
     ViewTransform view_;
 
     bool missing_visible_ = false;
+    bool blank_visible_ = false;
     std::vector<Wanted> wanted_;
 
     std::unordered_map<int, TextEntry> texts_;

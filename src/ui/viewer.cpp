@@ -430,6 +430,7 @@ bool Viewer::draw(ImVec2 size, float ui_scale, float fb_scale, std::uint64_t fra
     // Vẽ các trang trong vùng nhìn và ghi lại tile còn thiếu.
     wanted_.clear();
     missing_visible_ = false;
+    blank_visible_ = false;
     ImDrawList* dl = ImGui::GetWindowDrawList();
     for (int i = first; i <= last; ++i) draw_page(dl, i, origin, fb_scale, frame);
     collect_prefetch(fb_scale);
@@ -485,6 +486,7 @@ void Viewer::draw_page(ImDrawList* dl, int page, const ImVec2& origin, float fb_
             tex.last_used = frame;
             fallback.emplace_back(key, &tex);
         });
+        if (fallback.empty()) blank_visible_ = true;
         std::sort(fallback.begin(), fallback.end(),
                   [](const auto& a, const auto& b) { return a.first.scale_q < b.first.scale_q; });
         for (const auto& [key, tex] : fallback) {

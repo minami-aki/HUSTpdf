@@ -145,6 +145,8 @@ int run(const std::vector<std::string>& args) {
             options.repack_weights = true;
         } else if (a == "--glossary") {
             options.open_glossary = true;
+        } else if (a == "--debug-frames") {
+            options.debug_frames = true;
         } else if (a == "--model-window") {
             options.open_model_window = true;
         } else if (a == "--context") {
@@ -187,6 +189,9 @@ int run(const std::vector<std::string>& args) {
     }
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);
+    log::info("OpenGL: {} | {} | {}", reinterpret_cast<const char*>(glGetString(GL_VENDOR)),
+              reinterpret_cast<const char*>(glGetString(GL_RENDERER)),
+              reinterpret_cast<const char*>(glGetString(GL_VERSION)));
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();

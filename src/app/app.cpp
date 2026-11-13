@@ -32,6 +32,7 @@ namespace pdfread::app {
 namespace {
 
 constexpr double kSnapshotTimeoutSeconds = 60.0;
+constexpr double kHoldBlankSeconds = 0.1;  // giữ khung cũ tối đa bấy lâu chờ tile (thường 2–10 ms)
 constexpr double kTranslateDebounceSeconds = 0.25;  // chờ sau khi thả chuột rồi mới dịch
 constexpr std::size_t kMaxTranslateChars = 2000;    // giới hạn độ dài đoạn gửi đi dịch
 constexpr int kClassifyPages = 3;                    // số trang đầu dùng để phân loại lĩnh vực
@@ -151,7 +152,9 @@ int App::run() {
     const bool snapshot_mode = !options_.snapshot_path.empty();
     int frames_left = 3;
     while (!glfwWindowShouldClose(window_) && !exit_code_) {
-        if (frames_left > 0 || snapshot_mode) {
+        if (held_frame_) {
+            glfwWaitEventsTimeout(0.004);  // đang giữ khung cũ chờ tile: không quay vòng đốt CPU
+        } else if (frames_left > 0 || snapshot_mode) {
             glfwPollEvents();
         } else {
             // Đứng yên: chờ sự kiện. Thức dậy đúng hẹn nếu đang đếm debounce trước khi dịch,
@@ -193,7 +196,42 @@ bool App::render_frame() {
     glClear(GL_COLOR_BUFFER_BIT);
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     if (!options_.snapshot_path.empty()) update_snapshot(fb_w, fb_h);
-    glfwSwapBuffers(window_);
+    if (options_.debug_frames) {
+        // Chẩn đoán nhấp nháy: thống kê nội dung khung hình vừa vẽ (độ sáng TB, tỉ lệ điểm tối).
+        std::vector<unsigned char> px(static_cast<std::size_t>(fb_w) * 3 * static_cast<std::size_t>(fb_h));
+        glPixelStorei(GL_PACK_ALIGNMENT, 1);
+        glReadBuffer(GL_BACK);
+        glReadPixels(0, 0, fb_w, fb_h, GL_RGB, GL_UNSIGNED_BYTE, px.data());
+        double sum = 0;
+        std::size_t dark = 0;
+        for (std::size_t i = 0; i < px.size(); i += 3) {
+            const int l = (px[i] + px[i + 1] + px[i + 2]) / 3;
+            sum += l;
+            dark += l < 100 ? 1 : 0;
+        }
+        const double n = static_cast<double>(px.size() / 3);
+        const ImDrawData* dd = ImGui::GetDrawData();
+        log::info("FRAME {} t={:.3f} lists={} vtx={} mean={:.1f} dark={:.4f} fb={}x{} blank={}", frame_, glfwGetTime(),
+                  dd->CmdListsCount, dd->TotalVtxCount, sum / n, static_cast<double>(dark) / n, fb_w, fb_h,
+                  viewer_.has_blank_tiles() ? 1 : 0);
+    }
+    // Khung đang hiển thị đầy đủ mà khung mới còn lộ nền trắng: giữ khung cũ (không swap) cho tới
+    // khi tile render xong hoặc quá kHoldBlankSeconds. Đang cuộn liên tục (khung trước cũng thiếu)
+    // thì vẫn hiển thị để không khựng.
+    const bool blank = viewer_.document() != nullptr && viewer_.has_blank_tiles();
+    bool present = true;
+    if (blank && last_presented_complete_ && options_.snapshot_path.empty()) {
+        const double now = glfwGetTime();
+        if (hold_since_ == 0) hold_since_ = now;
+        present = now - hold_since_ >= kHoldBlankSeconds;
+    }
+    held_frame_ = !present;
+    if (options_.debug_frames && !present) log::info("FRAME {} held (blank tiles)", frame_);
+    if (present) {
+        glfwSwapBuffers(window_);
+        last_presented_complete_ = !blank;
+        hold_since_ = 0;
+    }
 
     ++frame_;
     in_frame_ = false;

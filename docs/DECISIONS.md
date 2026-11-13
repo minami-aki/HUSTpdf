@@ -151,6 +151,13 @@ Tập `tools/eval/nuclear.csv` (40 câu hạt nhân – nguyên tử, có ngữ 
 - Đóng gói (`tools/package.ps1`): Visual C++ runtime app-local = đúng các DLL mà file trong gói import (dumpbin): `vcruntime140.dll`, `vcruntime140_1.dll`, `msvcp140.dll` (các `api-ms-win-crt-*` có sẵn trong Windows 10+). Gói 36 MB (zip 17 MB): `pdfread.exe` 18,2 MB (MuPDF + curl + SQLite tĩnh), llama/ggml ~13 MB (9 biến thể CPU). Giấy phép bên thứ ba lấy từ file `copyright` của vcpkg (21 thành phần, bỏ Catch2). Đã chạy bản đóng gói: tìm thấy `data/`, nạp DLL, dịch đúng.
 - CI (`.github/workflows/ci.yml`): `windows-latest`, clone vcpkg (cần lịch sử cho `builtin-baseline`), cache thư mục binary cache theo hash `vcpkg.json` + `triplets/`, `build.ps1 -Preset release -Test`, `package.ps1`, artifact zip; tag `v*` -> `gh release create` kèm zip. Chưa chạy được vì repo chưa có remote GitHub.
 
+## 2026-11-13 — chống chớp trắng khi trang chưa render xong
+
+- Triệu chứng (người dùng báo): cả cửa sổ chớp khi thao tác, với một tài liệu cụ thể (Lamarsh), sau khi kéo cửa sổ sang màn hình khác rồi kéo về. Máy: AMD Radeon tích hợp (app chạy trên card này) + RTX 3050, màn hình laptop 1920×1080 144 Hz và LG 2560×1440, cả hai 100 %.
+- Chẩn đoán bằng `--debug-frames` (thống kê nội dung từng khung trước khi swap) trên chính phiên của người dùng: lúc đổi cửa sổ 1200 -> 1920 px, chế độ vừa chiều rộng đổi tỉ lệ 2,39 -> 3,87 nên mọi tile phải render lại; khi lật/cuộn sang trang chưa có tile, app đưa lên màn hình khung có nền trắng (độ sáng TB 253) xen kẽ khung có chữ (240) dù mỗi tile chỉ mất 2–6 ms -> chớp trắng. Loại trừ: bộ đệm texture không loại tile đang hiển thị; đổi màn hình không đổi DPI; nội dung khung và ảnh DWM ổn định khi không thiếu tile.
+- Sửa: Viewer báo `has_blank_tiles()` (tile hiển thị chưa có và không có tile tỉ lệ khác để vẽ tạm). Nếu khung đang hiển thị đầy đủ mà khung mới lộ nền trắng thì không swap — giữ khung cũ tối đa 100 ms (chờ bằng `glfwWaitEventsTimeout(4 ms)`, không quay vòng); đang cuộn liên tục (khung trước cũng thiếu) thì vẫn hiển thị. Đo lại (End/Home/PageDown trên Lamarsh): 2 khung trống đều được giữ, 0 khung trắng lên màn hình; CPU đứng yên vẫn 0 ms/10 s.
+- Các tham số thử nghiệm `--linger`, `--vsync` (giả thuyết tần số quét thay đổi) đã gỡ; giữ `--debug-frames` để chẩn đoán.
+
 ## Thông tin tham chiếu
 
 - vcpkg baseline: `177e8175121536d414f405ed8b3099b325a42638` (2026-11-11).
