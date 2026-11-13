@@ -184,9 +184,9 @@
         },
         {
           "id": "physics.nuclear",
-          "name_vi": "Kỹ thuật hạt nhân",
-          "name_en": "Nuclear engineering",
-          "keywords": ["nuclear", "reactor", "neutron", "fission", "fusion", "radiation", "radioactive", "isotope", "decay", "half-life", "dose", "dosimetry", "shielding", "fuel rod", "control rod", "moderator", "coolant", "criticality", "cross section", "gamma ray", "alpha particle", "beta particle", "radiation protection", "nuclear medicine", "detector"],
+          "name_vi": "Kỹ thuật hạt nhân – Vật lý nguyên tử",
+          "name_en": "Nuclear engineering and atomic physics",
+          "keywords": ["nuclear", "reactor", "neutron", "fission", "fusion", "radiation", "radioactive", "isotope", "decay", "half-life", "dose", "dosimetry", "shielding", "fuel rod", "control rod", "moderator", "coolant", "criticality", "cross section", "gamma ray", "alpha particle", "beta particle", "radiation protection", "nuclear medicine", "detector", "nucleus", "nuclei", "nucleon", "nuclide", "radionuclide", "binding energy", "atomic physics", "atomic nucleus", "electron shell", "excited state", "ground state", "spectral line", "quantum number", "hyperfine", "zeeman", "bohr", "rydberg", "neutrino", "positron", "becquerel", "sievert", "uranium", "plutonium", "tokamak", "enrichment", "spent fuel", "radioactive waste", "scintillation", "gamma spectroscopy", "reactivity", "burnup", "multiplication factor", "delayed neutron", "pressurized water reactor", "boiling water reactor", "xenon", "decay heat", "radiation dose", "radioisotope"],
           "glossary": "glossary/physics.nuclear.csv"
         },
         {

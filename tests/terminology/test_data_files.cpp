@@ -61,4 +61,22 @@ TEST_CASE("Real domain keywords classify typical abstracts", "[terminology][data
               U"removal and sludge production were measured.") == "chem_bio.environmental");
     CHECK(top(U"A convolutional neural network is trained on the dataset with gradient descent; accuracy, precision "
               U"and recall on the test set show less overfitting.") == "it.data_science_ai");
+    CHECK(top(U"The effective multiplication factor and the delayed neutron fraction of the pressurized water reactor "
+              U"core are computed; xenon poisoning and burnup reduce reactivity.") == "physics.nuclear");
+    CHECK(top(U"Hyperfine structure and the Zeeman effect of the excited state are measured; the Rydberg constant "
+              U"and spectral line positions agree with the Bohr model of the atomic nucleus.") == "physics.nuclear");
+}
+
+TEST_CASE("Nuclear glossary finds reactor and atomic physics terms", "[terminology][data]") {
+    const auto cat = terminology::DomainCatalog::load(data_dir() / "domains.json");
+    const auto* sub = cat.find("physics.nuclear");
+    REQUIRE(sub != nullptr);
+    const auto entries = terminology::load_glossary_csv(sub->glossary);
+    CHECK(entries.size() >= 400);
+    terminology::GlossaryIndex index(entries);
+    const std::u32string text =
+        U"The binding energy per nucleon peaks near iron, while the delayed neutron fraction controls the reactor period.";
+    std::vector<std::string> found;
+    for (const auto& m : index.find_in(text)) found.push_back(m.entry->term_en);
+    CHECK(found == std::vector<std::string>{"binding energy per nucleon", "delayed neutron fraction", "reactor period"});
 }

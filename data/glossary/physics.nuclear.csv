@@ -1,31 +1,509 @@
 term_en,term_vi,keep_english,notes,source
-nuclear reactor,lò phản ứng hạt nhân,0,,draft
-neutron,nơtron,0,,draft
+atom,nguyên tử,0,,draft
+atomic physics,vật lý nguyên tử,0,,draft
+nuclear physics,vật lý hạt nhân,0,,draft
+nucleus,hạt nhân,0,hạt nhân nguyên tử,draft
+nuclei,các hạt nhân,0,số nhiều của nucleus,draft
+atomic nucleus,hạt nhân nguyên tử,0,,draft
+electron,electron,0,,draft
 proton,proton,1,,draft
-nuclear fission,phân hạch hạt nhân,0,,draft
-nuclear fusion,tổng hợp hạt nhân,0,nhiệt hạch,draft
-chain reaction,phản ứng dây chuyền,0,,draft
+neutron,nơtron,0,,draft
+nucleon,nuclôn,0,,draft
+nuclide,nuclit,0,,draft
+isotope,đồng vị,0,,draft
+isobar,đồng khối,0,hạt nhân cùng số khối,draft
+isotone,đồng nơtron,0,hạt nhân cùng số nơtron,draft
+nuclear isomer,đồng phân hạt nhân,0,,draft
+atomic number,số hiệu nguyên tử,0,,draft
+mass number,số khối,0,,draft
+atomic mass unit,đơn vị khối lượng nguyên tử,0,u,draft
+atomic mass,khối lượng nguyên tử,0,,draft
+electron volt,electronvôn,0,eV,draft
+photon,photon,1,,draft
+positron,pozitron,0,,draft
+antiparticle,phản hạt,0,,draft
+neutrino,nơtrino,0,,draft
+antineutrino,phản nơtrino,0,,draft
+quark,quark,1,,draft
+gluon,gluon,1,,draft
+lepton,lepton,1,,draft
+hadron,hađron,0,,draft
+baryon,baryon,1,,draft
+meson,meson,1,,draft
+pion,pion,1,,draft
+muon,muon,1,,draft
+elementary particle,hạt cơ bản,0,,draft
+fundamental interaction,tương tác cơ bản,0,,draft
+strong interaction,tương tác mạnh,0,,draft
+weak interaction,tương tác yếu,0,,draft
+electromagnetic interaction,tương tác điện từ,0,,draft
+nuclear force,lực hạt nhân,0,,draft
+electron shell,lớp electron,0,,draft
+subshell,phân lớp,0,,draft
+orbital,orbital,0,obitan,draft
+atomic orbital,orbital nguyên tử,0,,draft
+electron configuration,cấu hình electron,0,,draft
+valence electron,electron hóa trị,0,,draft
+core electron,electron lõi,0,,draft
+energy level,mức năng lượng,0,,draft
+ground state,trạng thái cơ bản,0,,draft
+excited state,trạng thái kích thích,0,,draft
+metastable state,trạng thái siêu bền,0,,draft
+excitation,kích thích,0,,draft
+excitation energy,năng lượng kích thích,0,,draft
+ionization,ion hóa,0,,draft
+ionization energy,năng lượng ion hóa,0,,draft
+ionization potential,thế ion hóa,0,,draft
+electron affinity,ái lực electron,0,,draft
+recombination,tái hợp,0,,draft
+Bohr model,mẫu nguyên tử Bohr,0,,draft
+Bohr radius,bán kính Bohr,0,,draft
+Rutherford scattering,tán xạ Rutherford,0,,draft
+Rutherford model,mẫu nguyên tử Rutherford,0,,draft
+quantum number,số lượng tử,0,,draft
+principal quantum number,số lượng tử chính,0,,draft
+orbital quantum number,số lượng tử quỹ đạo,0,,draft
+azimuthal quantum number,số lượng tử phương vị,0,số lượng tử quỹ đạo,draft
+magnetic quantum number,số lượng tử từ,0,,draft
+spin quantum number,số lượng tử spin,0,,draft
+spin,spin,1,,draft
+angular momentum,mômen động lượng,0,,draft
+orbital angular momentum,mômen động lượng quỹ đạo,0,,draft
+total angular momentum,mômen động lượng toàn phần,0,,draft
+Pauli exclusion principle,nguyên lý loại trừ Pauli,0,,draft
+Hund's rule,quy tắc Hund,0,,draft
+Aufbau principle,nguyên lý vững bền,0,nguyên lý xây dựng Aufbau,draft
+wave function,hàm sóng,0,,draft
+Schrödinger equation,phương trình Schrödinger,0,,draft
+uncertainty principle,nguyên lý bất định,0,,draft
+de Broglie wavelength,bước sóng de Broglie,0,,draft
+wave-particle duality,lưỡng tính sóng - hạt,0,,draft
+Planck constant,hằng số Planck,0,,draft
+quantum mechanics,cơ học lượng tử,0,,draft
+spin-orbit coupling,tương tác spin - quỹ đạo,0,,draft
+LS coupling,liên kết LS,0,,draft
+jj coupling,liên kết jj,0,,draft
+fine structure,cấu trúc tinh tế,0,,draft
+hyperfine structure,cấu trúc siêu tinh tế,0,,draft
+fine-structure constant,hằng số cấu trúc tinh tế,0,,draft
+Zeeman effect,hiệu ứng Zeeman,0,,draft
+Stark effect,hiệu ứng Stark,0,,draft
+Lamb shift,dịch chuyển Lamb,0,,draft
+selection rule,quy tắc lọc lựa,0,,draft
+transition probability,xác suất chuyển dời,0,,draft
+radiative transition,chuyển dời bức xạ,0,,draft
+spontaneous emission,phát xạ tự phát,0,,draft
+stimulated emission,phát xạ cưỡng bức,0,,draft
+oscillator strength,lực dao động tử,0,,draft
+spectral line,vạch phổ,0,,draft
+line width,độ rộng vạch,0,,draft
+natural linewidth,độ rộng vạch tự nhiên,0,,draft
+emission spectrum,phổ phát xạ,0,,draft
+absorption spectrum,phổ hấp thụ,0,,draft
+atomic spectrum,phổ nguyên tử,0,,draft
+Rydberg constant,hằng số Rydberg,0,,draft
+Rydberg atom,nguyên tử Rydberg,0,,draft
+Lyman series,dãy Lyman,0,,draft
+Balmer series,dãy Balmer,0,,draft
+Paschen series,dãy Paschen,0,,draft
+hydrogen atom,nguyên tử hiđro,0,,draft
+hydrogen-like ion,ion giống hiđro,0,,draft
+magnetic moment,mômen từ,0,,draft
+Bohr magneton,manheton Bohr,0,,draft
+nuclear magneton,manheton hạt nhân,0,,draft
+Landé g-factor,thừa số Landé,0,thừa số g,draft
+gyromagnetic ratio,tỷ số từ hồi chuyển,0,,draft
+Larmor precession,tuế sai Larmor,0,,draft
+Larmor frequency,tần số Larmor,0,,draft
+photoelectric effect,hiệu ứng quang điện,0,,draft
+Compton scattering,tán xạ Compton,0,,draft
+Compton effect,hiệu ứng Compton,0,,draft
+pair production,hiệu ứng tạo cặp,0,,draft
+annihilation,hủy cặp,0,,draft
+annihilation radiation,bức xạ hủy cặp,0,,draft
+bremsstrahlung,bức xạ hãm,0,,draft
+characteristic X-ray,tia X đặc trưng,0,,draft
+X-ray,tia X,0,,draft
+Auger electron,electron Auger,0,,draft
+Auger effect,hiệu ứng Auger,0,,draft
+fluorescence yield,hiệu suất huỳnh quang,0,,draft
+Moseley's law,định luật Moseley,0,,draft
+laser cooling,làm lạnh bằng laser,0,,draft
+magneto-optical trap,bẫy quang - từ,0,,draft
+optical lattice,mạng quang học,0,,draft
+Bose-Einstein condensate,ngưng tụ Bose - Einstein,0,,draft
+atomic clock,đồng hồ nguyên tử,0,,draft
+atomic beam,chùm nguyên tử,0,,draft
+mass spectrometry,khối phổ,0,,draft
+mass spectrometer,khối phổ kế,0,,draft
+nuclear structure,cấu trúc hạt nhân,0,,draft
+binding energy,năng lượng liên kết,0,,draft
+binding energy per nucleon,năng lượng liên kết riêng,0,năng lượng liên kết trên một nuclôn,draft
+mass defect,độ hụt khối,0,,draft
+mass excess,độ dư khối,0,,draft
+mass-energy equivalence,tương đương khối lượng - năng lượng,0,,draft
+semi-empirical mass formula,công thức khối lượng bán thực nghiệm,0,công thức Weizsäcker,draft
+liquid drop model,mẫu giọt chất lỏng,0,,draft
+shell model,mẫu vỏ,0,,draft
+nuclear shell model,mẫu vỏ hạt nhân,0,,draft
+collective model,mẫu tập thể,0,,draft
+Fermi gas model,mẫu khí Fermi,0,,draft
+magic number,số magic,0,,draft
+doubly magic nucleus,hạt nhân magic kép,0,,draft
+nuclear spin,spin hạt nhân,0,,draft
+parity,tính chẵn lẻ,0,,draft
+nuclear radius,bán kính hạt nhân,0,,draft
+nuclear density,mật độ hạt nhân,0,,draft
+deformed nucleus,hạt nhân biến dạng,0,,draft
+quadrupole moment,mômen tứ cực,0,,draft
+valley of stability,thung lũng bền,0,,draft
+line of stability,đường bền,0,,draft
+drip line,đường giới hạn bền nuclôn,0,,draft
+stable nucleus,hạt nhân bền,0,,draft
+unstable nucleus,hạt nhân không bền,0,,draft
+level scheme,sơ đồ mức,0,,draft
+giant resonance,cộng hưởng khổng lồ,0,,draft
+nuclear reaction,phản ứng hạt nhân,0,,draft
+Q-value,giá trị Q,0,năng lượng phản ứng,draft
+threshold energy,năng lượng ngưỡng,0,,draft
+Coulomb barrier,hàng rào Coulomb,0,,draft
+tunneling,hiệu ứng đường hầm,0,,draft
+compound nucleus,hạt nhân hợp phần,0,,draft
+direct reaction,phản ứng trực tiếp,0,,draft
+elastic scattering,tán xạ đàn hồi,0,,draft
+inelastic scattering,tán xạ không đàn hồi,0,,draft
+neutron capture,bắt nơtron,0,,draft
+radiative capture,bắt bức xạ,0,,draft
+photonuclear reaction,phản ứng quang hạt nhân,0,,draft
+spallation,phản ứng vỡ vụn,0,,draft
+transmutation,biến đổi hạt nhân,0,,draft
+nucleosynthesis,tổng hợp nguyên tố,0,tổng hợp hạt nhân trong vũ trụ,draft
+cross section,tiết diện,0,tiết diện phản ứng,draft
+microscopic cross section,tiết diện vi mô,0,,draft
+macroscopic cross section,tiết diện vĩ mô,0,,draft
+differential cross section,tiết diện vi phân,0,,draft
+barn,barn,1,đơn vị tiết diện,draft
+mean free path,quãng đường tự do trung bình,0,,draft
+reaction rate,tốc độ phản ứng,0,,draft
 radioactivity,phóng xạ,0,,draft
 radioactive decay,phân rã phóng xạ,0,,draft
-isotope,đồng vị,0,,draft
-half-life,chu kỳ bán rã,0,,draft
-ionizing radiation,bức xạ ion hóa,0,,draft
-gamma ray,tia gamma,0,,draft
+decay,phân rã,0,,draft
+alpha decay,phân rã alpha,0,,draft
+beta decay,phân rã beta,0,,draft
+beta-minus decay,phân rã beta trừ,0,,draft
+beta-plus decay,phân rã beta cộng,0,,draft
+electron capture,bắt electron,0,,draft
+gamma decay,phân rã gamma,0,,draft
+internal conversion,biến hoán nội,0,,draft
+conversion electron,electron biến hoán,0,,draft
+isomeric transition,chuyển dời đồng phân,0,,draft
+spontaneous fission,phân hạch tự phát,0,,draft
 alpha particle,hạt alpha,0,,draft
 beta particle,hạt beta,0,,draft
-absorbed dose,liều hấp thụ,0,,draft
-equivalent dose,liều tương đương,0,,draft
-dosimetry,đo liều,0,,draft
-radiation protection,an toàn bức xạ,0,,draft
-shielding,che chắn,0,,draft
+gamma ray,tia gamma,0,,draft
+gamma radiation,bức xạ gamma,0,,draft
+decay constant,hằng số phân rã,0,,draft
+half-life,chu kỳ bán rã,0,,draft
+mean lifetime,thời gian sống trung bình,0,,draft
+decay chain,chuỗi phân rã,0,,draft
+decay series,họ phóng xạ,0,dãy phóng xạ,draft
+decay scheme,sơ đồ phân rã,0,,draft
+parent nuclide,hạt nhân mẹ,0,,draft
+daughter nuclide,hạt nhân con,0,,draft
+branching ratio,tỷ số phân nhánh,0,,draft
+specific activity,hoạt độ riêng,0,,draft
+activity concentration,nồng độ hoạt độ,0,,draft
+becquerel,becquerel,1,Bq,draft
+curie,curie,1,Ci,draft
+secular equilibrium,cân bằng thế kỷ,0,,draft
+transient equilibrium,cân bằng tạm thời,0,,draft
+radionuclide,hạt nhân phóng xạ,0,,draft
+radioisotope,đồng vị phóng xạ,0,,draft
+natural radioactivity,phóng xạ tự nhiên,0,,draft
+artificial radioactivity,phóng xạ nhân tạo,0,,draft
+radiocarbon dating,định tuổi bằng cacbon phóng xạ,0,,draft
+deuterium,đơteri,0,,draft
+tritium,triti,0,,draft
+deuteron,đơteron,0,,draft
+heavy water,nước nặng,0,,draft
+uranium,urani,0,,draft
+thorium,thori,0,,draft
+plutonium,plutoni,0,,draft
+radium,radi,0,,draft
+radon,radon,1,,draft
+nuclear fission,phân hạch hạt nhân,0,,draft
+fission,phân hạch,0,,draft
+nuclear fusion,tổng hợp hạt nhân,0,nhiệt hạch,draft
+thermonuclear fusion,phản ứng nhiệt hạch,0,,draft
+fission fragment,mảnh phân hạch,0,,draft
+fission product,sản phẩm phân hạch,0,,draft
+fission yield,suất lượng phân hạch,0,,draft
+fissile material,vật liệu phân hạch,0,,draft
+fertile material,vật liệu tái sinh,0,,draft
+chain reaction,phản ứng dây chuyền,0,,draft
+prompt neutron,nơtron tức thời,0,,draft
+delayed neutron,nơtron trễ,0,,draft
+delayed neutron fraction,tỷ phần nơtron trễ,0,,draft
+neutron multiplication factor,hệ số nhân nơtron,0,,draft
+effective multiplication factor,hệ số nhân hiệu dụng,0,k_eff,draft
+infinite multiplication factor,hệ số nhân vô hạn,0,k_inf,draft
+four-factor formula,công thức bốn thừa số,0,,draft
+six-factor formula,công thức sáu thừa số,0,,draft
+reactivity,độ phản ứng,0,,draft
+reactivity coefficient,hệ số độ phản ứng,0,,draft
+temperature coefficient of reactivity,hệ số nhiệt độ của độ phản ứng,0,,draft
+void coefficient,hệ số rỗng,0,,draft
+Doppler coefficient,hệ số Doppler,0,,draft
+Doppler broadening,mở rộng Doppler,0,,draft
+reactor period,chu kỳ lò phản ứng,0,,draft
+criticality,tới hạn,0,trạng thái tới hạn,draft
+critical mass,khối lượng tới hạn,0,,draft
+subcritical,dưới tới hạn,0,,draft
+supercritical,trên tới hạn,0,,draft
+prompt critical,tới hạn tức thời,0,,draft
+neutron economy,cân bằng nơtron,0,,draft
+neutron leakage,rò nơtron,0,,draft
+thermal neutron,nơtron nhiệt,0,,draft
+fast neutron,nơtron nhanh,0,,draft
+epithermal neutron,nơtron trên nhiệt,0,,draft
+neutron moderation,làm chậm nơtron,0,,draft
+neutron slowing down,làm chậm nơtron,0,,draft
+lethargy,letargi,0,,draft
+neutron diffusion,khuếch tán nơtron,0,,draft
+diffusion length,độ dài khuếch tán,0,,draft
+migration length,độ dài dịch chuyển,0,,draft
+resonance absorption,hấp thụ cộng hưởng,0,,draft
+resonance escape probability,xác suất tránh hấp thụ cộng hưởng,0,,draft
+neutron flux,thông lượng nơtron,0,,draft
+fluence,thông lượng tích phân,0,fluence,draft
+neutron source,nguồn nơtron,0,,draft
+neutron poison,chất độc nơtron,0,,draft
+burnable poison,chất độc cháy được,0,,draft
+xenon poisoning,nhiễm độc xenon,0,,draft
+samarium poisoning,nhiễm độc samari,0,,draft
+burnup,độ cháy,0,độ cháy nhiên liệu,draft
+breeding ratio,hệ số tái sinh,0,,draft
+conversion ratio,hệ số chuyển hóa,0,,draft
+plasma,plasma,1,,draft
+tokamak,tokamak,1,,draft
+stellarator,stellarator,1,,draft
+magnetic confinement,giam giữ bằng từ trường,0,,draft
+inertial confinement,giam giữ quán tính,0,,draft
+Lawson criterion,tiêu chuẩn Lawson,0,,draft
+fusion ignition,đánh lửa nhiệt hạch,0,,draft
+deuterium-tritium reaction,phản ứng đơteri - triti,0,phản ứng D-T,draft
+nuclear reactor,lò phản ứng hạt nhân,0,,draft
+reactor physics,vật lý lò phản ứng,0,,draft
+neutronics,tính toán nơtron,0,,draft
+thermal-hydraulics,thủy nhiệt,0,,draft
+nuclear power plant,nhà máy điện hạt nhân,0,,draft
+nuclear energy,năng lượng hạt nhân,0,,draft
+nuclear engineering,kỹ thuật hạt nhân,0,,draft
+light water reactor,lò phản ứng nước nhẹ,0,,draft
+pressurized water reactor,lò phản ứng nước áp lực,0,PWR,draft
+boiling water reactor,lò phản ứng nước sôi,0,BWR,draft
+heavy water reactor,lò phản ứng nước nặng,0,,draft
+pressurized heavy water reactor,lò phản ứng nước nặng áp lực,0,PHWR,draft
+gas-cooled reactor,lò phản ứng làm mát bằng khí,0,,draft
+high-temperature gas-cooled reactor,lò phản ứng nhiệt độ cao làm mát bằng khí,0,HTGR,draft
+molten salt reactor,lò phản ứng muối nóng chảy,0,,draft
+fast reactor,lò phản ứng nơtron nhanh,0,,draft
+fast breeder reactor,lò tái sinh nhanh,0,,draft
+sodium-cooled fast reactor,lò nơtron nhanh làm mát bằng natri,0,,draft
+small modular reactor,lò phản ứng mô-đun nhỏ,0,SMR,draft
+research reactor,lò phản ứng nghiên cứu,0,,draft
+Generation IV reactor,lò phản ứng thế hệ IV,0,,draft
+reactor core,vùng hoạt,0,lõi lò phản ứng,draft
+fuel assembly,bó nhiên liệu,0,,draft
 fuel rod,thanh nhiên liệu,0,,draft
+fuel pellet,viên nhiên liệu,0,,draft
+fuel cladding,vỏ bọc nhiên liệu,0,,draft
+cladding,vỏ bọc,0,,draft
+zircaloy,hợp kim zirconi,0,,draft
 control rod,thanh điều khiển,0,,draft
+control rod drive mechanism,cơ cấu dẫn động thanh điều khiển,0,,draft
 moderator,chất làm chậm,0,,draft
 coolant,chất tải nhiệt,0,,draft
-criticality,tới hạn,0,trạng thái tới hạn,draft
-cross section,tiết diện,0,tiết diện phản ứng,draft
-neutron flux,thông lượng nơtron,0,,draft
+reflector,vành phản xạ,0,vành phản xạ nơtron,draft
+reactor pressure vessel,thùng lò áp lực,0,,draft
+reactor containment,nhà lò,0,lớp vỏ bảo vệ lò,draft
+containment building,nhà lò,0,,draft
+steam generator,bình sinh hơi,0,,draft
+pressurizer,bình điều áp,0,,draft
+primary circuit,vòng sơ cấp,0,,draft
+secondary circuit,vòng thứ cấp,0,,draft
+reactor coolant pump,bơm tải nhiệt lò,0,,draft
+emergency core cooling system,hệ thống làm mát vùng hoạt khẩn cấp,0,ECCS,draft
+decay heat,nhiệt dư,0,nhiệt phân rã,draft
+residual heat removal,tải nhiệt dư,0,,draft
+soluble boron,bo hòa tan,0,,draft
+boric acid,axit boric,0,,draft
+scram,dập lò khẩn cấp,0,,draft
+reactor trip,ngắt lò,0,,draft
+reactor startup,khởi động lò,0,,draft
+reactor shutdown,dừng lò,0,,draft
+critical heat flux,thông lượng nhiệt tới hạn,0,,draft
+departure from nucleate boiling,khủng hoảng sôi bọt,0,DNB,draft
+linear heat generation rate,mật độ công suất tuyến tính,0,,draft
+power peaking factor,hệ số đỉnh công suất,0,,draft
+power density,mật độ công suất,0,,draft
+in-core instrumentation,thiết bị đo trong vùng hoạt,0,,draft
+nuclear safety,an toàn hạt nhân,0,,draft
+defense in depth,phòng thủ nhiều lớp,0,,draft
+loss-of-coolant accident,sự cố mất chất tải nhiệt,0,LOCA,draft
+core meltdown,nóng chảy vùng hoạt,0,,draft
+design basis accident,sự cố thiết kế cơ sở,0,,draft
+beyond design basis accident,sự cố vượt thiết kế cơ sở,0,,draft
+station blackout,mất toàn bộ nguồn điện xoay chiều,0,,draft
+probabilistic safety assessment,đánh giá an toàn xác suất,0,PSA,draft
+severe accident,sự cố nghiêm trọng,0,,draft
+nuclear fuel,nhiên liệu hạt nhân,0,,draft
+nuclear fuel cycle,chu trình nhiên liệu hạt nhân,0,,draft
+fuel cycle,chu trình nhiên liệu,0,,draft
+uranium dioxide,urani đioxit,0,UO2,draft
+MOX fuel,nhiên liệu MOX,0,nhiên liệu ôxit hỗn hợp,draft
+yellowcake,bánh vàng,0,U3O8 cô đặc,draft
+uranium enrichment,làm giàu urani,0,,draft
 enrichment,làm giàu,0,làm giàu urani,draft
+gas centrifuge,máy ly tâm khí,0,,draft
+gaseous diffusion,khuếch tán khí,0,,draft
+low-enriched uranium,urani làm giàu thấp,0,LEU,draft
+highly enriched uranium,urani làm giàu cao,0,HEU,draft
+depleted uranium,urani nghèo,0,,draft
+natural uranium,urani tự nhiên,0,,draft
+separative work unit,đơn vị công tách,0,SWU,draft
+reprocessing,tái chế nhiên liệu,0,,draft
 spent fuel,nhiên liệu đã qua sử dụng,0,,draft
+spent fuel pool,bể chứa nhiên liệu đã qua sử dụng,0,,draft
+dry cask storage,lưu giữ khô trong thùng chứa,0,,draft
+interim storage,lưu giữ tạm thời,0,,draft
+radioactive waste,chất thải phóng xạ,0,,draft
+high-level waste,chất thải phóng xạ mức cao,0,,draft
+intermediate-level waste,chất thải phóng xạ mức trung bình,0,,draft
+low-level waste,chất thải phóng xạ mức thấp,0,,draft
+deep geological repository,kho lưu giữ địa chất sâu,0,,draft
+vitrification,thủy tinh hóa,0,,draft
+decommissioning,tháo dỡ,0,tháo dỡ cơ sở hạt nhân,draft
+nuclear safeguards,thanh sát hạt nhân,0,,draft
+safeguards,thanh sát,0,,draft
+non-proliferation,không phổ biến vũ khí hạt nhân,0,,draft
+IAEA,IAEA,1,Cơ quan Năng lượng Nguyên tử Quốc tế,draft
+ionizing radiation,bức xạ ion hóa,0,,draft
+non-ionizing radiation,bức xạ không ion hóa,0,,draft
+radiation,bức xạ,0,,draft
+linear energy transfer,truyền năng lượng tuyến tính,0,LET,draft
+stopping power,năng suất hãm,0,,draft
+particle range,quãng chạy của hạt,0,,draft
+Bragg peak,đỉnh Bragg,0,,draft
+Bragg curve,đường cong Bragg,0,,draft
+attenuation coefficient,hệ số suy giảm,0,,draft
+linear attenuation coefficient,hệ số suy giảm tuyến tính,0,,draft
+mass attenuation coefficient,hệ số suy giảm khối,0,,draft
+half-value layer,bề dày làm yếu một nửa,0,HVL,draft
+tenth-value layer,bề dày làm yếu mười lần,0,TVL,draft
+buildup factor,hệ số tích lũy,0,,draft
+Cherenkov radiation,bức xạ Cherenkov,0,,draft
+dosimetry,đo liều,0,,draft
+dosimeter,liều kế,0,,draft
+absorbed dose,liều hấp thụ,0,,draft
+equivalent dose,liều tương đương,0,,draft
+effective dose,liều hiệu dụng,0,,draft
+committed effective dose,liều hiệu dụng tích lũy,0,,draft
+collective dose,liều tập thể,0,,draft
+dose rate,suất liều,0,,draft
+kerma,kerma,1,,draft
+radiation exposure,chiếu xạ,0,,draft
+exposure rate,suất liều chiếu,0,,draft
+sievert,sievert,1,Sv,draft
+roentgen,röntgen,0,R,draft
+radiation weighting factor,trọng số bức xạ,0,,draft
+tissue weighting factor,trọng số mô,0,,draft
+quality factor,hệ số phẩm chất bức xạ,0,,draft
+deterministic effect,hiệu ứng tất định,0,,draft
+stochastic effect,hiệu ứng ngẫu nhiên,0,,draft
+acute radiation syndrome,hội chứng bức xạ cấp tính,0,,draft
+radiation protection,an toàn bức xạ,0,,draft
+ALARA,ALARA,1,thấp nhất có thể đạt được một cách hợp lý,draft
+dose limit,giới hạn liều,0,,draft
+occupational exposure,chiếu xạ nghề nghiệp,0,,draft
+public exposure,chiếu xạ công chúng,0,,draft
+medical exposure,chiếu xạ y tế,0,,draft
+internal exposure,chiếu xạ trong,0,,draft
+external exposure,chiếu xạ ngoài,0,,draft
+radioactive contamination,nhiễm bẩn phóng xạ,0,,draft
+decontamination,tẩy xạ,0,,draft
+shielding,che chắn,0,,draft
+radiation shielding,che chắn bức xạ,0,,draft
+controlled area,vùng kiểm soát,0,,draft
+supervised area,vùng giám sát,0,,draft
+radiation worker,nhân viên bức xạ,0,,draft
+radiation monitoring,quan trắc bức xạ,0,,draft
+background radiation,phông bức xạ,0,,draft
+biological half-life,chu kỳ bán thải sinh học,0,,draft
+effective half-life,chu kỳ bán rã hiệu dụng,0,,draft
+radiotoxicity,độc tính phóng xạ,0,,draft
 detector,đầu dò,0,,draft
+radiation detector,đầu dò bức xạ,0,,draft
+Geiger-Müller counter,ống đếm Geiger - Müller,0,,draft
+Geiger counter,ống đếm Geiger,0,,draft
+ionization chamber,buồng ion hóa,0,,draft
+proportional counter,ống đếm tỷ lệ,0,,draft
+scintillation detector,đầu dò nhấp nháy,0,,draft
+scintillator,chất nhấp nháy,0,,draft
+photomultiplier tube,ống nhân quang điện,0,,draft
+semiconductor detector,đầu dò bán dẫn,0,,draft
+high-purity germanium detector,đầu dò germani siêu tinh khiết,0,HPGe,draft
+silicon detector,đầu dò silic,0,,draft
+neutron detector,đầu dò nơtron,0,,draft
+fission chamber,buồng phân hạch,0,,draft
+self-powered neutron detector,đầu dò nơtron tự cấp,0,,draft
+thermoluminescent dosimeter,liều kế nhiệt phát quang,0,TLD,draft
+film badge,liều kế phim,0,,draft
+personal dosimeter,liều kế cá nhân,0,,draft
+cloud chamber,buồng mây,0,,draft
+bubble chamber,buồng bọt,0,,draft
+energy resolution,độ phân giải năng lượng,0,,draft
+detection efficiency,hiệu suất ghi,0,,draft
+dead time,thời gian chết,0,,draft
+count rate,tốc độ đếm,0,,draft
+counting statistics,thống kê đếm,0,,draft
+coincidence counting,đếm trùng phùng,0,,draft
+pulse height analysis,phân tích biên độ xung,0,,draft
+multichannel analyzer,máy phân tích đa kênh,0,MCA,draft
+gamma spectroscopy,đo phổ gamma,0,,draft
+gamma spectrum,phổ gamma,0,,draft
+alpha spectroscopy,đo phổ alpha,0,,draft
+full-energy peak,đỉnh hấp thụ toàn phần,0,,draft
+photopeak,đỉnh quang điện,0,,draft
+Compton edge,mép Compton,0,,draft
+Compton continuum,nền Compton,0,,draft
+escape peak,đỉnh thoát,0,,draft
+minimum detectable activity,hoạt độ phát hiện tối thiểu,0,MDA,draft
+calibration source,nguồn chuẩn,0,,draft
+time of flight,thời gian bay,0,,draft
+particle accelerator,máy gia tốc hạt,0,,draft
+cyclotron,xiclotron,0,,draft
+linear accelerator,máy gia tốc tuyến tính,0,,draft
+synchrotron,synchrotron,1,,draft
+Van de Graaff generator,máy phát Van de Graaff,0,,draft
+ion beam,chùm ion,0,,draft
+neutron generator,máy phát nơtron,0,,draft
+isotope production,sản xuất đồng vị,0,,draft
 nuclear medicine,y học hạt nhân,0,,draft
+radiopharmaceutical,dược chất phóng xạ,0,,draft
+positron emission tomography,chụp cắt lớp phát xạ positron,0,PET,draft
+single-photon emission computed tomography,chụp cắt lớp phát xạ đơn photon,0,SPECT,draft
+gamma camera,máy chụp gamma,0,,draft
+radiotherapy,xạ trị,0,,draft
+brachytherapy,xạ trị áp sát,0,,draft
+proton therapy,xạ trị proton,0,,draft
+irradiation,chiếu xạ,0,,draft
+food irradiation,chiếu xạ thực phẩm,0,,draft
+radiation sterilization,khử trùng bằng bức xạ,0,,draft
+neutron activation analysis,phân tích kích hoạt nơtron,0,NAA,draft
+X-ray fluorescence,huỳnh quang tia X,0,XRF,draft
+industrial radiography,chụp ảnh phóng xạ công nghiệp,0,,draft
+non-destructive testing,kiểm tra không phá hủy,0,NDT,draft
+radioactive tracer,chất đánh dấu phóng xạ,0,,draft
+Mössbauer effect,hiệu ứng Mössbauer,0,,draft
+nuclear magnetic resonance,cộng hưởng từ hạt nhân,0,NMR,draft
