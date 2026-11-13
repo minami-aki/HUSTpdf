@@ -145,6 +145,8 @@ int run(const std::vector<std::string>& args) {
             options.repack_weights = true;
         } else if (a == "--glossary") {
             options.open_glossary = true;
+        } else if (a == "--model-window") {
+            options.open_model_window = true;
         } else if (a == "--context") {
             options.include_context = true;
         } else if (a == "--no-cache") {

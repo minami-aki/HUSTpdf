@@ -201,7 +201,7 @@ ModelWindow::Action ModelWindow::draw(const Info& info, float ui_scale) {
         ImGui::TextUnformatted("Chưa có mô hình dịch. Tải mô hình mặc định bên dưới (cần mạng một lần), hoặc chọn file "
                                "GGUF có sẵn trên máy.");
     } else {
-        ImGui::TextUnformatted(path_to_utf8(info.model_path).c_str());
+        ImGui::TextUnformatted(path_to_utf8(std::filesystem::path(info.model_path).make_preferred()).c_str());
         ImGui::TextDisabled("Trạng thái: %s", info.model_status.c_str());
     }
     ImGui::PopTextWrapPos();
@@ -212,7 +212,7 @@ ModelWindow::Action ModelWindow::draw(const Info& info, float ui_scale) {
     ImGui::PushTextWrapPos(0);
     ImGui::TextUnformatted(std::format("Tencent HY-MT1.5-1.8B, bản GGUF Q4_K_M ({}). Lưu vào {}. Sau khi tải, app "
                                        "chạy hoàn toàn offline.",
-                                       gb(src.size), path_to_utf8(info.download_dir))
+                                       gb(src.size), path_to_utf8(std::filesystem::path(info.download_dir).make_preferred()))
                                .c_str());
     ImGui::PopTextWrapPos();
     draw_download(info, ui_scale, action);

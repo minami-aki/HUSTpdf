@@ -62,6 +62,7 @@ struct AppOptions {
     bool repack_weights = false;                          // xem translate::ModelConfig
     bool include_context = false;                         // thêm câu xung quanh vào prompt (thử nghiệm)
     bool open_glossary = false;                           // mở sẵn cửa sổ glossary
+    bool open_model_window = false;                       // mở sẵn cửa sổ "Mô hình dịch"
     bool use_cache = true;                                // cache bản dịch trong SQLite
     std::filesystem::path database_path;                  // rỗng: local_data_dir()/pdfread.db
 };

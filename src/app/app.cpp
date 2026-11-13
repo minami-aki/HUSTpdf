@@ -110,6 +110,7 @@ App::App(GLFWwindow* window, const pdf::RootContext& root, AppOptions options)
     load_settings();
 
     glossary_window_.open = options_.open_glossary;
+    if (options_.open_model_window) model_window_.open = true;
     if (options_.fit_page) viewer_.set_zoom_mode(ui::ZoomMode::FitPage);
     if (options_.zoom) viewer_.set_zoom(*options_.zoom);
     if (!options_.open_path.empty()) open_file(options_.open_path);

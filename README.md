@@ -14,7 +14,7 @@ Trình đọc PDF khoa học – kỹ thuật, dịch Anh → Việt tức thờ
 | M3 | llama.cpp + HY-MT1.5, popup dịch streaming | xong |
 | M4 | Tầng 2: làm sạch, tách câu, ngữ cảnh | xong (ngữ cảnh viết sẵn nhưng tắt mặc định, xem DECISIONS) |
 | M5 | Tầng 1: lĩnh vực, glossary, placeholder, hậu kiểm | xong (glossary 37 lĩnh vực là bản nháp, cần duyệt) |
-| M6 | Cache SQLite, tải mô hình, đánh giá, CI | chưa |
+| M6 | Cache SQLite, tải mô hình, đánh giá, CI, đóng gói | xong (CI chạy khi repo có remote GitHub) |
 
 ## Build (Windows)
 
@@ -40,7 +40,22 @@ Mọi file chạy và DLL nằm chung trong `build/<preset>/bin/`: `pdfread.exe`
 
 ## Mô hình dịch
 
-Không đóng gói kèm. Tải `HY-MT1.5-1.8B-Q4_K_M.gguf` (1,13 GB) từ [tencent/HY-MT1.5-1.8B-GGUF](https://huggingface.co/tencent/HY-MT1.5-1.8B-GGUF) (giấy phép Tencent HY Community License) và đặt vào thư mục `models/` (cạnh `pdfread.exe` hoặc ở gốc dự án khi phát triển; `models/` nằm trong `.gitignore`), hoặc chọn file bằng nút **Mô hình…**. SHA-256: `4383ac0c3c8e476de98ff979c2a3f069f8c4fb385e7860cf2d28da896cc477c7`.
+Không đóng gói kèm. Lần chạy đầu (chưa có mô hình) app mở cửa sổ **Mô hình dịch**:
+
+- **Tải từ Hugging Face**: `HY-MT1.5-1.8B-Q4_K_M.gguf` (1,13 GB) từ [tencent/HY-MT1.5-1.8B-GGUF](https://huggingface.co/tencent/HY-MT1.5-1.8B-GGUF). App hiện giấy phép Tencent HY Community License, chỉ tải khi bạn đồng ý; lưu vào `%LOCALAPPDATA%\Pdfread\models\` (kèm `HY-MT1.5-License.txt`), có thanh tiến trình, tạm dừng / tải tiếp (HTTP Range, kể cả sau khi thoát app), tự thử lại khi rớt mạng, kiểm tra SHA-256 `4383ac0c3c8e476de98ff979c2a3f069f8c4fb385e7860cf2d28da896cc477c7` trước khi dùng.
+- **Chọn file GGUF có sẵn** (máy không có mạng).
+
+Đường dẫn mô hình được lưu; sau lần đầu app không cần mạng. Thư mục tìm mô hình tự động: `%LOCALAPPDATA%\Pdfread\models`, `models/` cạnh `pdfread.exe`, `models/` ở gốc dự án (khi phát triển; nằm trong `.gitignore`). Cửa sổ này (nút **Mô hình…**) còn chỉnh số luồng CPU và xóa cache bản dịch.
+
+## Cache và cài đặt
+
+`%LOCALAPPDATA%\Pdfread\pdfread.db` (SQLite) lưu:
+
+- **cache bản dịch** — khóa là SHA-256 của đúng prompt gửi mô hình (câu, thuật ngữ chỉ định, ngữ cảnh) + tên mô hình; bôi đen lại câu đã dịch thì hiện ngay (popup có nút **Dịch lại**); chỉ lưu bản dịch không có cảnh báo hậu kiểm; tối đa 20 000 mục;
+- **cài đặt** — mô hình, số luồng, "Dịch tự động", dịch cả câu / chỉ phần chọn;
+- **theo tài liệu** (nhận diện bằng dấu vân tay file) — lĩnh vực tự phân loại, lĩnh vực bạn chọn, trang đang đọc (mở lại file thì về đúng trang).
+
+Glossary vẫn là các file CSV (xem dưới).
 
 ## Lĩnh vực và glossary
 
@@ -60,6 +75,7 @@ Không đóng gói kèm. Tải `HY-MT1.5-1.8B-Q4_K_M.gguf` (1,13 GB) từ [tence
 ```powershell
 .\build\release\bin\pdfread.exe [file.pdf] [--page N] [--zoom 150 | --fit-page] [--timing] [--verbose]
                                 [--model file.gguf] [--threads N] [--repack] [--gen-prompt]
+                                [--no-cache] [--db file.db]
 ```
 
 | Phím / thao tác | Tác dụng |
@@ -98,10 +114,30 @@ python tools\dict\import_md_dictionary.py Tu_dien_Ky_thuat_Hat_nhan.md data\glos
 .\build\release\bin\pdfread-translate.exe --model models\HY-MT1.5-1.8B-Q4_K_M.gguf "The kernel schedules threads."
 .\build\release\bin\pdfread-translate.exe --model ... --context "câu xung quanh" --term "stress=ứng suất" "..."
 .\build\release\bin\pdfread.exe sample.pdf --glossary --snapshot out.png   # mở sẵn cửa sổ glossary
-# Test với mô hình thật (mặc định bị ẩn):
-$env:PDFREAD_TEST_MODEL = "models\HY-MT1.5-1.8B-Q4_K_M.gguf"; .\build\release\bin\pdfread_tests.exe "[model]"
+.\build\release\bin\pdfread.exe sample.pdf --model-window --snapshot out.png   # mở sẵn cửa sổ "Mô hình dịch"
+# Test với mô hình thật / cần mạng (mặc định bị ẩn; "[network]" tải tiếp 4 MB cuối của mô hình từ Hugging Face):
+$env:PDFREAD_TEST_MODEL = "models\HY-MT1.5-1.8B-Q4_K_M.gguf"; .\build\release\bin\pdfread_tests.exe "[model]"; .\build\release\bin\pdfread_tests.exe "[network]"
 ```
 Ở chế độ `--snapshot`, text của vùng chọn và bản dịch (nếu có mô hình) được ghi ra log dạng `SELECTION<<...>>`, `TRANSLATION<<...>>`.
+
+## Đánh giá chất lượng dịch
+
+```powershell
+.\build\release\bin\pdfread-eval.exe --model models\HY-MT1.5-1.8B-Q4_K_M.gguf --input tools\eval\sample.csv `
+    --out eval_results.csv --summary eval_summary.csv [--configs 123] [--limit N]
+```
+
+CSV vào (UTF-8, có tiêu đề): `en, domain, context, reference` (domain = id lĩnh vực con trong `data/domains.json`; context, reference có thể rỗng). So sánh 3 cấu hình: (1) dịch câu đơn, (2) + lĩnh vực + glossary, (3) + câu xung quanh. Báo cáo theo nhóm lĩnh vực: tỉ lệ thuật ngữ dịch đúng theo glossary, số placeholder lỗi, số con số bị mất, độ trễ trung bình và p95; `--out` ghi từng bản dịch để so sánh. Tập mẫu: `tools/eval/sample.csv` (32 câu, 8 nhóm), `tools/eval/nuclear.csv` (40 câu hạt nhân). Kết quả đã đo: [docs/DECISIONS.md](docs/DECISIONS.md).
+
+## Đóng gói và phát hành
+
+```powershell
+.\tools\package.ps1 [-Build] [-Tools]     # -> dist\Pdfread-<phiên bản>-win64\ và .zip
+```
+
+Gói chạy không cần cài đặt: `pdfread.exe`, DLL llama.cpp/ggml, Visual C++ runtime (`vcruntime140*.dll`, `msvcp140.dll`, chép app-local nên không cần cài VC Redist), `data/`, `LICENSE.txt`, `THIRD_PARTY_NOTICES.md`, `licenses/` (giấy phép từng thư viện). Không kèm mô hình. `-Tools` thêm `pdfread-translate.exe`, `pdfread-eval.exe`.
+
+GitHub Actions (`.github/workflows/ci.yml`): mỗi push/PR build + chạy test bản release trên Windows, đóng gói và đính kèm zip vào artifact; push tag `v*` thì tạo GitHub Release kèm zip. vcpkg cố định theo `builtin-baseline`, có cache binary (lần đầu ~20 phút).
 
 ## Cấu trúc thư mục
 
@@ -119,7 +155,8 @@ src/
 data/           domains.json, glossary/*.csv, fonts/
 models/         file GGUF (không commit)
 tests/          unit test (Catch2)
-tools/          build.ps1, sample_pdf/, translate_cli/, eval/
+tools/          build.ps1, package.ps1, sample_pdf/, translate_cli/, eval/, dict/
+.github/        workflows/ci.yml (build + test + đóng gói trên Windows; tag v* -> GitHub Release)
 third_party/    llama.cpp (submodule, cố định v0.9.0)
 ```
 

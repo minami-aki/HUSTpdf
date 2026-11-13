@@ -136,6 +136,21 @@ Tập `tools/eval/nuclear.csv` (40 câu hạt nhân – nguyên tử, có ngữ 
 - Thống nhất mục nháp với từ điển: detector -> "detector" (từ điển dùng "detector" ở 28 mục).
 - Đánh giá `tools/eval/nuclear.csv` (cấu hình glossary): thuật ngữ đúng 97,9 % (142/145), 0 lỗi placeholder, 0 mất số; 2 lần "hoạt độ phóng xạ" được dịch gọn là "hoạt độ" (nghĩa đúng, hậu kiểm so khớp nguyên văn). Từ điển dùng "năng lượng liên kết riêng" cho binding energy per nucleon — mô hình đôi khi thêm "của mỗi hạt nhân"; giữ theo từ điển của người dùng.
 
+## 2026-11-13 — M6 (phần cuối): đánh giá, tải mô hình thật, đóng gói, CI
+
+- Đánh giá `tools/eval/sample.csv` (32 câu, 4 câu × 8 nhóm), HY-MT1.5-1.8B Q4_K_M, Ryzen 5 4600H, 6 luồng:
+
+  | Cấu hình | Thuật ngữ đúng | Lỗi placeholder | Mất số | Độ trễ TB / p95 |
+  |---|---|---|---|---|
+  | 1 dịch câu đơn | 36,0 % (32/89) | 0 | 0 | 3,6 / 4,8 s |
+  | 2 + lĩnh vực + glossary | 100 % (89/89), mọi nhóm 100 % | 0 | 0 | 3,7 / 4,9 s |
+  | 3 + câu xung quanh | 96,6 % (86/89; nhóm vật liệu 80 %) | 0 | 0 | 4,0 / 5,2 s |
+
+  Theo nhóm, dịch trơn chỉ đúng 17–47 % thuật ngữ (cơ khí thấp nhất); glossary trong prompt đưa tất cả lên 100 %. Cấu hình 3 không cải thiện và đôi khi làm sai (như M4) — giữ tắt mặc định.
+- Tải tiếp thật từ Hugging Face (test ẩn `[network]`): `.part` thiếu 4 MiB cuối -> yêu cầu Range từ byte 1 128 886 208 (qua chuyển hướng CDN), tải phần thiếu, SHA-256 khớp, tổng 9 s. Tải văn bản giấy phép (`License.txt`) cũng kiểm tra trong `[network]`.
+- Đóng gói (`tools/package.ps1`): Visual C++ runtime app-local = đúng các DLL mà file trong gói import (dumpbin): `vcruntime140.dll`, `vcruntime140_1.dll`, `msvcp140.dll` (các `api-ms-win-crt-*` có sẵn trong Windows 10+). Gói 36 MB (zip 17 MB): `pdfread.exe` 18,2 MB (MuPDF + curl + SQLite tĩnh), llama/ggml ~13 MB (9 biến thể CPU). Giấy phép bên thứ ba lấy từ file `copyright` của vcpkg (21 thành phần, bỏ Catch2). Đã chạy bản đóng gói: tìm thấy `data/`, nạp DLL, dịch đúng.
+- CI (`.github/workflows/ci.yml`): `windows-latest`, clone vcpkg (cần lịch sử cho `builtin-baseline`), cache thư mục binary cache theo hash `vcpkg.json` + `triplets/`, `build.ps1 -Preset release -Test`, `package.ps1`, artifact zip; tag `v*` -> `gh release create` kèm zip. Chưa chạy được vì repo chưa có remote GitHub.
+
 ## Thông tin tham chiếu
 
 - vcpkg baseline: `177e8175121536d414f405ed8b3099b325a42638` (2026-11-11).

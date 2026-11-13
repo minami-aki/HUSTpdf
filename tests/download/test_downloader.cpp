@@ -1,7 +1,9 @@
-// Bộ tải file: kiểm tra bằng URL file:// (không cần mạng). Tải tiếp qua HTTP Range được
-// kiểm tra thủ công với Hugging Face (xem docs/DECISIONS.md).
+// Bộ tải file: kiểm tra bằng URL file:// (không cần mạng). Tải tiếp qua HTTP Range từ
+// Hugging Face: test ẩn "[network]" (cần mạng và PDFREAD_TEST_MODEL).
 
 #include <atomic>
+#include <cstdlib>
+#include <filesystem>
 #include <fstream>
 #include <string>
 #include <thread>
@@ -11,6 +13,7 @@
 #include "download/downloader.hpp"
 #include "support/mupdf_fixture.hpp"
 #include "util/sha256.hpp"
+#include "util/utf8.hpp"
 
 using namespace pdfread::download;
 using pdfread::testing::TempFile;
@@ -120,4 +123,59 @@ TEST_CASE("Background downloader finishes and exposes progress", "[download]") {
     }
     CHECK(wakes.load() > 0);
     CHECK(part_path("a/b.gguf") == std::filesystem::path("a/b.gguf.part"));
+}
+
+namespace {
+
+std::string env_var(const char* name) {
+#ifdef _MSC_VER
+    char* buf = nullptr;
+    std::size_t len = 0;
+    if (_dupenv_s(&buf, &len, name) != 0 || buf == nullptr) return {};
+    std::string value(buf);
+    std::free(buf);
+    return value;
+#else
+    const char* v = std::getenv(name);
+    return v != nullptr ? v : "";
+#endif
+}
+
+}  // namespace
+
+// Tải tiếp thật từ Hugging Face (cần mạng, ẩn mặc định): dùng file mô hình có sẵn
+// (PDFREAD_TEST_MODEL), cắt bớt 4 MiB cuối thành ".part" rồi tải tiếp phần thiếu bằng HTTP
+// Range và kiểm tra SHA-256. Chạy: pdfread_tests "[network]"
+TEST_CASE("Resume the default model download from Hugging Face", "[.network]") {
+    const std::string model = env_var("PDFREAD_TEST_MODEL");
+    if (model.empty()) SKIP("PDFREAD_TEST_MODEL chưa đặt");
+    const auto& src = kDefaultModel;
+    const std::filesystem::path dir = std::filesystem::temp_directory_path() / "pdfread_resume_test";
+    std::filesystem::create_directories(dir);
+    const std::filesystem::path dest = dir / src.file_name;
+    std::filesystem::remove(dest);
+    std::filesystem::copy_file(pdfread::path_from_utf8(model), part_path(dest),
+                               std::filesystem::copy_options::overwrite_existing);
+    std::filesystem::resize_file(part_path(dest), src.size - (4u << 20));
+
+    std::atomic<bool> cancel{false};
+    std::uint64_t first_done = 0;
+    const auto p = download_file({.url = src.url, .dest = dest, .expected_size = src.size, .sha256 = src.sha256},
+                                 [&](const DownloadProgress& pr) {
+                                     if (pr.state == DownloadState::Downloading && first_done == 0) first_done = pr.done;
+                                 },
+                                 cancel);
+    INFO(p.error);
+    CHECK(p.state == DownloadState::Done);
+    CHECK(first_done >= src.size - (4u << 20));  // tiếp tục từ chỗ đã có, không tải lại từ đầu
+    CHECK(std::filesystem::file_size(dest) == src.size);
+    std::filesystem::remove_all(dir);
+}
+
+TEST_CASE("Fetch the model license text from Hugging Face", "[.network]") {
+    std::string error;
+    const auto text = http_get(kDefaultModel.license_url, &error);
+    INFO(error);
+    REQUIRE(text.has_value());
+    CHECK(text->find("TENCENT HY COMMUNITY LICENSE") != std::string::npos);
 }
