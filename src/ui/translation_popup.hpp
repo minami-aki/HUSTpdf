@@ -29,7 +29,7 @@ public:
         SelectionOnly,  // đang dịch đúng phần bôi đen
     };
 
-    enum class Action { None, Close, UseWholeSentence, UseSelectionOnly, TranslateWithModel, EditTerm };
+    enum class Action { None, Close, UseWholeSentence, UseSelectionOnly, TranslateWithModel, EditTerm, Retranslate };
 
     struct TermHint {
         std::string en;
@@ -46,6 +46,8 @@ public:
 
     // Bắt đầu hiển thị bản dịch của mô hình cho yêu cầu `request_id`.
     void show(std::uint64_t request_id, bool truncated, Scope scope = Scope::None, std::vector<TermHint> terms = {});
+    // Hiển thị bản dịch lấy từ cache (không gọi mô hình); App đưa text vào bằng set_text().
+    void show_cached(bool truncated, Scope scope = Scope::None, std::vector<TermHint> terms = {});
     // Hiển thị kết quả tra glossary (không gọi mô hình).
     void show_glossary(GlossaryAnswer answer);
     void hide() noexcept { state_ = State::Hidden; }
@@ -63,6 +65,7 @@ public:
     [[nodiscard]] State state() const noexcept { return state_; }
     [[nodiscard]] bool visible() const noexcept { return state_ != State::Hidden; }
     [[nodiscard]] bool busy() const noexcept { return state_ == State::Waiting || state_ == State::Streaming; }
+    [[nodiscard]] bool from_cache() const noexcept { return from_cache_; }
     [[nodiscard]] std::uint64_t request_id() const noexcept { return request_id_; }
     [[nodiscard]] const std::string& text() const noexcept { return text_; }
     [[nodiscard]] const std::vector<std::string>& issues() const noexcept { return issues_; }
@@ -74,6 +77,7 @@ private:
 
     State state_ = State::Hidden;
     bool glossary_mode_ = false;
+    bool from_cache_ = false;
     std::uint64_t request_id_ = 0;
     std::string text_;
     std::string error_;

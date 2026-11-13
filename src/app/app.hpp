@@ -16,11 +16,13 @@
 #include "pdf/document.hpp"
 #include "pdf/render_service.hpp"
 #include "pdf/text_service.hpp"
+#include "storage/store.hpp"
 #include "terminology/glossary_store.hpp"
 #include "terminology/term_extractor.hpp"
 #include "text/protect.hpp"
 #include "translate/translation_service.hpp"
 #include "ui/glossary_window.hpp"
+#include "ui/model_window.hpp"
 #include "ui/texture_cache.hpp"
 #include "ui/translation_popup.hpp"
 #include "ui/viewer.hpp"
@@ -54,11 +56,14 @@ struct AppOptions {
 
     std::filesystem::path model_path;                     // rỗng: tự tìm trong model_search_dirs
     std::vector<std::filesystem::path> model_search_dirs;
+    std::filesystem::path model_download_dir;             // nơi lưu mô hình tải về (cửa sổ "Mô hình dịch")
     int threads = 0;                                      // luồng suy luận, 0 = mặc định
     bool add_generation_prompt = false;                   // xem translate::ModelConfig
     bool repack_weights = false;                          // xem translate::ModelConfig
     bool include_context = false;                         // thêm câu xung quanh vào prompt (thử nghiệm)
     bool open_glossary = false;                           // mở sẵn cửa sổ glossary
+    bool use_cache = true;                                // cache bản dịch trong SQLite
+    std::filesystem::path database_path;                  // rỗng: local_data_dir()/pdfread.db
 };
 
 class App {
@@ -79,8 +84,11 @@ private:
         std::uint64_t ticket = 0;
         std::filesystem::path path;
         std::shared_ptr<pdf::Document> doc;
-        std::vector<translate::DomainScore> domains;  // phân loại tự động
+        std::vector<translate::DomainScore> domains;  // phân loại tự động (có thể lấy từ cơ sở dữ liệu)
         std::string error;
+        std::string fingerprint;      // dấu vân tay file (rỗng nếu không có cơ sở dữ liệu)
+        std::string domain_override;  // lĩnh vực người dùng đã chọn cho tài liệu này
+        int last_page = 0;            // trang đang đọc lần trước
     };
 
     bool render_frame();
@@ -94,8 +102,14 @@ private:
     void update_snapshot(int fb_width, int fb_height);
 
     void update_translation();
-    void request_translation(bool force_model = false);
-    void finish_translation();
+    // force_model: bỏ qua trả lời bằng glossary; bypass_cache: không dùng bản dịch đã lưu.
+    void request_translation(bool force_model = false, bool bypass_cache = false);
+    void start_translation(translate::TranslateRequest request, bool truncated, ui::TranslationPopup::Scope scope,
+                           std::vector<ui::TranslationPopup::TermHint> hints, bool bypass_cache);
+    void finish_translation(bool from_model);
+    void load_settings();
+    void save_reading_position();
+    void draw_model_window();
     void start_term_extraction(const std::shared_ptr<pdf::Document>& doc, std::uint64_t ticket);
     void apply_domains();
     [[nodiscard]] std::vector<translate::DomainScore> effective_domains() const;
@@ -125,7 +139,14 @@ private:
         std::vector<terminology::GlossaryEntry> terms;
         std::unique_ptr<text::PlaceholderStream> stream;
         std::string raw;  // bản dịch thô (còn placeholder)
+        std::string cache_key;  // rỗng: không lưu cache
+        std::string source;     // văn bản gửi đi dịch (lưu kèm cache để tra cứu)
     };
+
+    std::unique_ptr<storage::Store> store_;  // nullptr nếu không mở được cơ sở dữ liệu
+    std::string catalog_version_;            // SHA-256 của domains.json (phân loại đã cache còn dùng được?)
+    std::string doc_fingerprint_;            // tài liệu đang mở
+    std::filesystem::path model_path_;       // mô hình đang dùng / đang nạp
 
     std::shared_ptr<const terminology::DomainCatalog> catalog_;  // dùng chung với luồng loader
     std::unique_ptr<terminology::GlossaryStore> glossary_;      // nullptr nếu thiếu data/domains.json
@@ -146,6 +167,7 @@ private:
     ui::Viewer viewer_;
     ui::TranslationPopup popup_;
     ui::GlossaryWindow glossary_window_;
+    ui::ModelWindow model_window_;
 
     bool auto_translate_ = true;
     bool whole_sentence_ = true;  // bôi đen nửa câu -> dịch cả câu (đổi được trong popup)

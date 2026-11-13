@@ -11,6 +11,9 @@ add_executable(pdfread_tests
     util/test_latest_slot.cpp
     util/test_thread_pool.cpp
     util/test_log_timer.cpp
+    util/test_sha256.cpp
+    storage/test_store.cpp
+    download/test_downloader.cpp
     ui/test_page_layout.cpp
     ui/test_view_transform.cpp
     pdf/test_tiles.cpp

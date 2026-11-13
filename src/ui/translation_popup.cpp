@@ -15,6 +15,7 @@ constexpr ImVec4 kTermColor{0.10f, 0.35f, 0.65f, 1.0f};
 void TranslationPopup::show(std::uint64_t request_id, bool truncated, Scope scope, std::vector<TermHint> terms) {
     state_ = State::Waiting;
     glossary_mode_ = false;
+    from_cache_ = false;
     request_id_ = request_id;
     truncated_ = truncated;
     scope_ = scope;
@@ -25,9 +26,16 @@ void TranslationPopup::show(std::uint64_t request_id, bool truncated, Scope scop
     stats_ = {};
 }
 
+void TranslationPopup::show_cached(bool truncated, Scope scope, std::vector<TermHint> terms) {
+    show(0, truncated, scope, std::move(terms));
+    state_ = State::Done;
+    from_cache_ = true;
+}
+
 void TranslationPopup::show_glossary(GlossaryAnswer answer) {
     state_ = State::Done;
     glossary_mode_ = true;
+    from_cache_ = false;
     request_id_ = 0;
     truncated_ = false;
     scope_ = Scope::None;
@@ -41,7 +49,7 @@ void TranslationPopup::show_glossary(GlossaryAnswer answer) {
 
 void TranslationPopup::on_event(const translate::TranslationEvent& e) {
     using Kind = translate::TranslationEvent::Kind;
-    if (state_ == State::Hidden || glossary_mode_ || e.request_id != request_id_) return;
+    if (state_ == State::Hidden || glossary_mode_ || from_cache_ || e.request_id != request_id_) return;
     switch (e.kind) {
         case Kind::Started:
         case Kind::Token: state_ = State::Streaming; break;
@@ -129,7 +137,9 @@ TranslationPopup::Action TranslationPopup::draw(const std::pair<ImVec2, ImVec2>&
         case State::Streaming: status = "đang dịch…"; break;
         case State::Cancelled: status = "đã hủy"; break;
         case State::Error: status = "lỗi"; break;
-        default: break;
+        default:
+            if (from_cache_) status = "đã lưu";
+            break;
     }
     const char* title = glossary_mode_ ? "Glossary" : "Bản dịch";
     ImGui::TextDisabled("%s", status.empty() ? title : std::format("{} · {}", title, status).c_str());
@@ -177,7 +187,11 @@ TranslationPopup::Action TranslationPopup::draw(const std::pair<ImVec2, ImVec2>&
             }
             ImGui::TextDisabled("%s", line.c_str());
         }
-        if (state_ == State::Done && stats_.output_tokens > 0) {
+        if (from_cache_) {
+            ImGui::TextDisabled("Lấy từ cache bản dịch.");
+            ImGui::SameLine();
+            if (ImGui::SmallButton("Dịch lại")) action = Action::Retranslate;
+        } else if (state_ == State::Done && stats_.output_tokens > 0) {
             ImGui::TextDisabled("%s", std::format("{:.2f} s · token đầu {:.2f} s · {:.0f} token/s",
                                                   stats_.total_ms / 1000.0, stats_.first_token_ms / 1000.0,
                                                   stats_.tokens_per_second())

@@ -3,6 +3,7 @@
 // Tham số dòng lệnh:
 //   pdfread [file.pdf] [--page N] [--zoom 150 | --fit-page] [--timing] [--verbose]
 //           [--model file.gguf] [--threads N] [--gen-prompt] [--repack] [--context]
+//           [--no-cache] [--db file.db]
 //   pdfread file.pdf --snapshot out.png   (kiểm thử: chờ render xong, chụp cửa sổ, thoát)
 
 #include <charconv>
@@ -31,6 +32,7 @@
 #include "ui/fonts.hpp"
 #include "util/cmdline.hpp"
 #include "util/log.hpp"
+#include "util/paths.hpp"
 #include "util/thread_name.hpp"
 #include "util/utf8.hpp"
 
@@ -145,6 +147,10 @@ int run(const std::vector<std::string>& args) {
             options.open_glossary = true;
         } else if (a == "--context") {
             options.include_context = true;
+        } else if (a == "--no-cache") {
+            options.use_cache = false;
+        } else if (a == "--db") {
+            options.database_path = path_from_utf8(next());
         } else if (a == "--select") {
             const std::string& spec = next();
             options.select = parse_select(spec);
@@ -157,6 +163,8 @@ int run(const std::vector<std::string>& args) {
     }
     options.data_dir = find_data_dir();
     options.font_dir = options.data_dir / "fonts";
+    options.model_download_dir = local_data_dir() / "models";
+    options.model_search_dirs.push_back(options.model_download_dir);
     options.model_search_dirs.push_back(executable_dir() / "models");
 #ifdef PDFREAD_SOURCE_DATA_DIR
     options.model_search_dirs.push_back(path_from_utf8(PDFREAD_SOURCE_DATA_DIR).parent_path() / "models");

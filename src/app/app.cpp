@@ -23,6 +23,7 @@
 #include "ui/fonts.hpp"
 #include "util/log.hpp"
 #include "util/paths.hpp"
+#include "util/sha256.hpp"
 #include "util/timer.hpp"
 #include "util/utf8.hpp"
 
@@ -60,7 +61,8 @@ App::App(GLFWwindow* window, const pdf::RootContext& root, AppOptions options)
       text_service_(root, [] { glfwPostEmptyEvent(); }),
       translation_([](const translate::ModelConfig& c) { return std::make_unique<translate::LlamaTranslator>(c); },
                    [] { glfwPostEmptyEvent(); }),
-      viewer_(render_, text_service_, textures_) {
+      viewer_(render_, text_service_, textures_),
+      model_window_([] { glfwPostEmptyEvent(); }) {
     glfwSetWindowUserPointer(window_, this);
     glfwSetDropCallback(window_, &App::on_drop);
     glfwSetWindowRefreshCallback(window_, &App::on_refresh);
@@ -86,23 +88,46 @@ App::App(GLFWwindow* window, const pdf::RootContext& root, AppOptions options)
         set_status(std::format("Không nạp được lĩnh vực/glossary: {}", e.what()), true);
     }
 
+    // Cơ sở dữ liệu: cài đặt, cache bản dịch, thông tin theo tài liệu.
+    try {
+        const std::filesystem::path db =
+            options_.database_path.empty() ? local_data_dir() / "pdfread.db" : options_.database_path;
+        store_ = storage::Store::open(db);
+        const auto stats = store_->translation_stats();
+        log::info("Cơ sở dữ liệu {}: {} bản dịch trong cache", path_to_utf8(db), stats.entries);
+    } catch (const std::exception& e) {
+        log::warn("Không mở được cơ sở dữ liệu (chạy không có cache/cài đặt): {}", e.what());
+    }
+    if (catalog_) catalog_version_ = sha256_file(options_.data_dir / "domains.json").value_or("");
+    load_settings();
+
     glossary_window_.open = options_.open_glossary;
     if (options_.fit_page) viewer_.set_zoom_mode(ui::ZoomMode::FitPage);
     if (options_.zoom) viewer_.set_zoom(*options_.zoom);
     if (!options_.open_path.empty()) open_file(options_.open_path);
 
-    // Nạp mô hình dịch ngay khi mở app (trên luồng suy luận, không chặn UI).
-    const std::filesystem::path model = options_.model_path.empty() ? find_default_model() : options_.model_path;
+    // Nạp mô hình dịch ngay khi mở app (trên luồng suy luận, không chặn UI). Thứ tự:
+    // --model, mô hình đã chọn lần trước (cài đặt), file GGUF trong các thư mục mô hình.
+    std::filesystem::path model = options_.model_path;
+    if (model.empty() && store_) {
+        if (const auto saved = store_->get("model.path")) {
+            std::error_code ec;
+            if (std::filesystem::is_regular_file(path_from_utf8(*saved), ec)) model = path_from_utf8(*saved);
+        }
+    }
+    if (model.empty()) model = find_default_model();
     if (!model.empty()) {
         load_model(model);
     } else {
-        log::info("Chưa có mô hình dịch: chọn file GGUF bằng nút \"Mô hình…\"");
+        log::info("Chưa có mô hình dịch: mở cửa sổ \"Mô hình dịch\" để tải về hoặc chọn file GGUF");
+        if (options_.snapshot_path.empty()) model_window_.open = true;  // lần chạy đầu
     }
 
     start_time_ = glfwGetTime();
 }
 
 App::~App() {
+    save_reading_position();
     glfwSetWindowUserPointer(window_, nullptr);
     glfwSetDropCallback(window_, nullptr);
     glfwSetWindowRefreshCallback(window_, nullptr);
@@ -202,6 +227,7 @@ bool App::draw_ui() {
     update_translation();
     draw_translation_popup();
     if (glossary_) glossary_window_.draw(*glossary_, extracted_terms_, extracting_, ui_scale_);
+    draw_model_window();
     return busy;
 }
 
@@ -225,7 +251,7 @@ void App::update_translation() {
                 }
                 break;
             case Kind::Done:
-                if (active_.stream && e.request_id == active_.id) finish_translation();
+                if (active_.stream && e.request_id == active_.id) finish_translation(true);
                 break;
             default: break;
         }
@@ -255,7 +281,7 @@ void App::update_translation() {
     }
 }
 
-void App::finish_translation() {
+void App::finish_translation(bool from_model) {
     popup_.append_text(active_.stream->flush());
     active_.stream.reset();
     // Bản cuối: khôi phục trên toàn bộ bản dịch thô và hậu kiểm.
@@ -269,10 +295,47 @@ void App::finish_translation() {
     }
     popup_.set_text(trim_copy(r.text));
     if (!issues.empty()) log::info("Hậu kiểm: {} vấn đề", issues.size());
+    // Chỉ lưu cache bản dịch "sạch": có vấn đề thì lần sau dịch lại (lấy mẫu ngẫu nhiên, có thể tốt hơn).
+    if (from_model && issues.empty() && store_ && !active_.cache_key.empty() && !trim_copy(active_.raw).empty()) {
+        try {
+            store_->put_translation(active_.cache_key, path_to_utf8(model_path_.filename()), active_.source, active_.raw);
+        } catch (const std::exception& e) {
+            log::warn("Không lưu được cache bản dịch: {}", e.what());
+        }
+    }
     popup_.set_issues(std::move(issues));
 }
 
-void App::request_translation(bool force_model) {
+void App::start_translation(translate::TranslateRequest request, bool truncated, ui::TranslationPopup::Scope scope,
+                            std::vector<ui::TranslationPopup::TermHint> hints, bool bypass_cache) {
+    active_.source = request.text;
+    if (store_ && options_.use_cache && !model_path_.empty()) {
+        active_.cache_key = storage::translation_cache_key(request, path_to_utf8(model_path_.filename()),
+                                                           options_.add_generation_prompt);
+        std::optional<std::string> hit;
+        if (!bypass_cache) {
+            try {
+                hit = store_->find_translation(active_.cache_key);
+            } catch (const std::exception& e) {
+                log::warn("Không đọc được cache bản dịch: {}", e.what());
+            }
+        }
+        if (hit) {
+            translation_.cancel();
+            log::debug("Dùng bản dịch trong cache");
+            active_.raw = std::move(*hit);
+            active_.stream = std::make_unique<text::PlaceholderStream>(active_.placeholders);
+            popup_.show_cached(truncated, scope, std::move(hints));
+            finish_translation(false);  // khôi phục placeholder + hậu kiểm như bản dịch mới
+            return;
+        }
+    }
+    active_.stream = std::make_unique<text::PlaceholderStream>(active_.placeholders);
+    active_.id = translation_.submit(std::move(request));
+    popup_.show(active_.id, truncated, scope, std::move(hints));
+}
+
+void App::request_translation(bool force_model, bool bypass_cache) {
     if (!viewer_.has_selection()) return;
     viewer_.clear_translated_highlight();
     active_ = ActiveTranslation{};
@@ -327,12 +390,9 @@ void App::request_translation(bool force_model) {
                        plan->request.context.empty() ? std::string() : " | ngữ cảnh: " + plan->request.context);
             std::vector<ui::TranslationPopup::TermHint> hints;
             for (const auto& t : plan->terms) hints.push_back({t.term_en, t.target()});
-            const bool truncated = plan->truncated;
             active_.placeholders = plan->placeholders;
             active_.terms = plan->terms;
-            active_.stream = std::make_unique<text::PlaceholderStream>(plan->placeholders);
-            active_.id = translation_.submit(std::move(plan->request));
-            popup_.show(active_.id, truncated, scope, std::move(hints));
+            start_translation(std::move(plan->request), plan->truncated, scope, std::move(hints), bypass_cache);
             return;
         }
     }
@@ -346,9 +406,7 @@ void App::request_translation(bool force_model) {
     translate::TranslateRequest request;
     request.text = std::move(text);
     request.domains = effective_domains();
-    active_.stream = std::make_unique<text::PlaceholderStream>(std::vector<text::Placeholder>{});
-    active_.id = translation_.submit(std::move(request));
-    popup_.show(active_.id, truncated);
+    start_translation(std::move(request), truncated, ui::TranslationPopup::Scope::None, {}, bypass_cache);
 }
 
 void App::draw_translation_popup() {
@@ -356,20 +414,20 @@ void App::draw_translation_popup() {
     const auto& anchor = viewer_.selection_screen_rect();
     if (!anchor) return;  // vùng chọn đang ở ngoài vùng nhìn
     using Action = ui::TranslationPopup::Action;
-    switch (popup_.draw(*anchor, viewer_.viewport_rect(), ui_scale_, translation_.model_state())) {
+    const Action action = popup_.draw(*anchor, viewer_.viewport_rect(), ui_scale_, translation_.model_state());
+    switch (action) {
         case Action::Close:
             translation_.cancel();
             viewer_.clear_translated_highlight();
             break;
         case Action::UseWholeSentence:
-            whole_sentence_ = true;
-            request_translation();
-            break;
         case Action::UseSelectionOnly:
-            whole_sentence_ = false;
+            whole_sentence_ = action == Action::UseWholeSentence;
+            if (store_) store_->set_bool("ui.whole_sentence", whole_sentence_);
             request_translation();
             break;
         case Action::TranslateWithModel: request_translation(true); break;
+        case Action::Retranslate: request_translation(true, true); break;
         case Action::EditTerm:
             if (glossary_) glossary_window_.edit(*glossary_, popup_.glossary_term());
             break;
@@ -410,19 +468,18 @@ void App::draw_domain_combo() {
             for (const auto& d : auto_domains_) auto_label += std::format(" {} {:.0f}%,", domain_name(d.domain_id), d.score * 100);
             auto_label.pop_back();
         }
-        if (ImGui::Selectable(auto_label.c_str(), domain_override_.empty())) {
-            domain_override_.clear();
+        auto set_override = [&](const std::string& id) {
+            domain_override_ = id;
             apply_domains();
-        }
+            if (store_ && !doc_fingerprint_.empty()) store_->set_domain_override(doc_fingerprint_, id);
+        };
+        if (ImGui::Selectable(auto_label.c_str(), domain_override_.empty())) set_override({});
         for (const auto& g : catalog_->groups()) {
             ImGui::SeparatorText(g.name_vi.c_str());
             for (std::size_t i : g.subdomains) {
                 const auto& s = catalog_->subdomains()[i];
                 ImGui::PushID(s.id.c_str());
-                if (ImGui::Selectable(s.name_vi.c_str(), domain_override_ == s.id)) {
-                    domain_override_ = s.id;
-                    apply_domains();
-                }
+                if (ImGui::Selectable(s.name_vi.c_str(), domain_override_ == s.id)) set_override(s.id);
                 ImGui::PopID();
             }
         }
@@ -459,12 +516,71 @@ void App::choose_model_dialog() {
     const nfdu8filteritem_t filters[] = {{"Mô hình GGUF", "gguf"}};
     const nfdresult_t result = NFD_OpenDialogU8(&out, filters, 1, nullptr);
     if (result == NFD_OKAY) {
-        load_model(path_from_utf8(out));
+        const std::filesystem::path path = path_from_utf8(out);
         NFD_FreePathU8(out);
+        if (store_) store_->set("model.path", path_to_utf8(path));
+        load_model(path);
+    }
+}
+
+void App::draw_model_window() {
+    ui::ModelWindow::Info info;
+    info.model_path = model_path_;
+    info.model_status = model_status_;
+    info.state = translation_.model_state();
+    info.download_dir = options_.model_download_dir;
+    info.threads = options_.threads;
+    info.default_threads = translate::LlamaTranslator::default_threads();
+    if (store_ && model_window_.open) {
+        try {
+            info.cache = store_->translation_stats();
+        } catch (const std::exception&) {
+        }
+    }
+    using Action = ui::ModelWindow::Action;
+    switch (model_window_.draw(info, ui_scale_)) {
+        case Action::ChooseFile: choose_model_dialog(); break;
+        case Action::Downloaded: {
+            const std::filesystem::path path = model_window_.downloaded_path();
+            if (store_) store_->set("model.path", path_to_utf8(path));
+            load_model(path);
+            break;
+        }
+        case Action::ApplyThreads:
+            options_.threads = model_window_.chosen_threads();
+            if (store_) store_->set_int("model.threads", options_.threads);
+            if (!model_path_.empty()) load_model(model_path_);
+            break;
+        case Action::ClearCache:
+            if (store_) store_->clear_translations();
+            log::info("Đã xóa cache bản dịch");
+            break;
+        case Action::None: break;
+    }
+}
+
+void App::load_settings() {
+    if (!store_) return;
+    try {
+        auto_translate_ = store_->get_bool("ui.auto_translate").value_or(auto_translate_);
+        whole_sentence_ = store_->get_bool("ui.whole_sentence").value_or(whole_sentence_);
+        if (options_.threads == 0) options_.threads = std::max(0, store_->get_int("model.threads").value_or(0));
+    } catch (const std::exception& e) {
+        log::warn("Không đọc được cài đặt: {}", e.what());
+    }
+}
+
+void App::save_reading_position() {
+    if (!store_ || doc_fingerprint_.empty() || !viewer_.document()) return;
+    try {
+        store_->set_last_page(doc_fingerprint_, viewer_.current_page());
+    } catch (const std::exception& e) {
+        log::warn("Không lưu được trang đang đọc: {}", e.what());
     }
 }
 
 void App::load_model(const std::filesystem::path& path) {
+    model_path_ = path;
     translate::ModelConfig config;
     config.model_path = path;
     config.threads = options_.threads;
@@ -576,11 +692,11 @@ void App::draw_toolbar() {
     ImGui::EndDisabled();
 
     ImGui::SameLine(0, 18.0f * ui_scale_);
-    ImGui::Checkbox("Dịch tự động", &auto_translate_);
+    if (ImGui::Checkbox("Dịch tự động", &auto_translate_) && store_) store_->set_bool("ui.auto_translate", auto_translate_);
     ImGui::SetItemTooltip("Dịch ngay khi bôi đen xong. Tắt thì dịch bằng Ctrl+T.");
     ImGui::SameLine();
-    if (ImGui::Button("Mô hình…")) choose_model_dialog();
-    ImGui::SetItemTooltip("Chọn file mô hình dịch (GGUF)");
+    if (ImGui::Button("Mô hình…")) model_window_.open = !model_window_.open;
+    ImGui::SetItemTooltip("Mô hình dịch: tải về, chọn file GGUF, số luồng, cache bản dịch");
     if (glossary_) {
         ImGui::SameLine(0, 18.0f * ui_scale_);
         draw_domain_combo();
@@ -656,20 +772,43 @@ void App::open_dialog() {
 }
 
 void App::open_file(const std::filesystem::path& path) {
+    save_reading_position();
     const std::uint64_t ticket = ++open_ticket_;
     current_ticket_ = ticket;
     loading_ = true;
     loading_path_ = path;
     set_status(std::format("Đang mở {}…", file_name_utf8(path)), false);
-    loader_.post([this, path, ticket, catalog = catalog_] {
-        OpenResult r{.ticket = ticket, .path = path, .doc = nullptr, .domains = {}, .error = {}};
+    loader_.post([this, path, ticket, catalog = catalog_, store = store_.get(), catalog_version = catalog_version_] {
+        OpenResult r;
+        r.ticket = ticket;
+        r.path = path;
         try {
             r.doc = pdf::Document::open(path);
         } catch (const std::exception& e) {
             r.error = e.what();
         }
+        // Thông tin đã lưu của tài liệu (theo dấu vân tay file): lĩnh vực, trang đang đọc.
+        bool classified = false;
+        if (r.doc && store != nullptr) {
+            try {
+                r.fingerprint = storage::document_fingerprint(path);
+                if (!r.fingerprint.empty()) {
+                    if (const auto info = store->find_document(r.fingerprint)) {
+                        r.domain_override = info->domain_override;
+                        r.last_page = info->last_page;
+                        if (!catalog_version.empty() && info->catalog == catalog_version) {
+                            r.domains = info->domains;
+                            classified = true;
+                            log::debug("Lĩnh vực lấy từ cơ sở dữ liệu");
+                        }
+                    }
+                }
+            } catch (const std::exception& e) {
+                log::warn("Không đọc được thông tin tài liệu đã lưu: {}", e.what());
+            }
+        }
         // Tầng 1: phân loại lĩnh vực theo mục lục và vài trang đầu (tiêu đề/tóm tắt nặng hơn).
-        if (r.doc && catalog) {
+        if (r.doc && catalog && !classified) {
             try {
                 ScopedTimer t("classify domains");
                 std::vector<terminology::WeightedText> inputs;
@@ -687,8 +826,21 @@ void App::open_file(const std::filesystem::path& path) {
                     }
                 }
                 r.domains = terminology::classify(inputs, *catalog);
+                classified = true;
             } catch (const std::exception& e) {
                 log::warn("Phân loại lĩnh vực thất bại: {}", e.what());
+            }
+        }
+        if (r.doc && store != nullptr && !r.fingerprint.empty()) {
+            try {
+                store->put_document({.fingerprint = r.fingerprint,
+                                     .path = path_to_utf8(path),
+                                     .catalog = classified ? catalog_version : std::string(),
+                                     .domains = r.domains,
+                                     .domain_override = r.domain_override,
+                                     .last_page = r.last_page});
+            } catch (const std::exception& e) {
+                log::warn("Không lưu được thông tin tài liệu: {}", e.what());
             }
         }
         open_results_.push(std::move(r));
@@ -714,7 +866,9 @@ void App::poll_open_results() {
         viewer_.set_document(r.doc);
         set_status(file_name_utf8(r.path), false);
         auto_domains_ = std::move(r.domains);
-        domain_override_.clear();
+        domain_override_ = r.domain_override;
+        if (catalog_ && !domain_override_.empty() && catalog_->find(domain_override_) == nullptr) domain_override_.clear();
+        doc_fingerprint_ = r.fingerprint;
         if (glossary_) {
             glossary_->set_document(r.path);
             apply_domains();
@@ -724,10 +878,18 @@ void App::poll_open_results() {
             start_term_extraction(r.doc, r.ticket);
         }
         glfwSetWindowTitle(window_, std::format("{} — Pdfread", file_name_utf8(r.path)).c_str());
+        bool explicit_page = false;
         if (!initial_view_applied_) {
             initial_view_applied_ = true;
-            if (options_.start_page) viewer_.go_to_page(*options_.start_page);
+            if (options_.start_page) {
+                viewer_.go_to_page(*options_.start_page);
+                explicit_page = true;
+            }
             if (options_.select) viewer_.select(options_.select->a, options_.select->b, options_.select->unit);
+        }
+        // Mở lại tài liệu: về trang đang đọc lần trước (không áp dụng khi chụp ảnh kiểm thử).
+        if (!explicit_page && r.last_page > 0 && options_.snapshot_path.empty()) {
+            viewer_.go_to_page(std::min(r.last_page, viewer_.page_count() - 1));
         }
     }
 }

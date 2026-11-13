@@ -5,10 +5,13 @@ find_package(imgui CONFIG REQUIRED)
 find_package(nfd CONFIG REQUIRED)
 find_package(unofficial-libmupdf CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
+find_package(unofficial-sqlite3 CONFIG REQUIRED)
+find_package(CURL REQUIRED)
 
 # --- util -------------------------------------------------------------------
 add_library(pdfread_util STATIC
     util/log.cpp
+    util/sha256.cpp
     util/thread_name.cpp
     util/thread_pool.cpp
 )
@@ -71,6 +74,26 @@ target_link_libraries(pdfread_translate
     PRIVATE pdfread_options llama ggml
 )
 
+
+# --- storage: SQLite (cài đặt, cache bản dịch, thông tin tài liệu) ------------
+add_library(pdfread_storage STATIC
+    storage/database.cpp
+    storage/store.cpp
+)
+target_link_libraries(pdfread_storage
+    PUBLIC pdfread_translate
+    PRIVATE pdfread_options unofficial::sqlite3::sqlite3
+)
+
+# --- download: tải mô hình lần đầu (libcurl) -----------------------------------
+add_library(pdfread_download STATIC
+    download/downloader.cpp
+)
+target_link_libraries(pdfread_download
+    PUBLIC pdfread_util
+    PRIVATE pdfread_options CURL::libcurl
+)
+
 # --- context: tầng 3 — vùng chọn -> kế hoạch dịch ----------------------------
 add_library(pdfread_context STATIC
     context/translation_plan.cpp
@@ -84,6 +107,7 @@ target_link_libraries(pdfread_context
 add_library(pdfread_ui STATIC
     ui/fonts.cpp
     ui/glossary_window.cpp
+    ui/model_window.cpp
     ui/page_layout.cpp
     ui/selection.cpp
     ui/texture_cache.cpp
@@ -91,7 +115,7 @@ add_library(pdfread_ui STATIC
     ui/viewer.cpp
 )
 target_link_libraries(pdfread_ui
-    PUBLIC pdfread_pdf pdfread_translate pdfread_context imgui::imgui glfw OpenGL::GL nfd::nfd
+    PUBLIC pdfread_pdf pdfread_translate pdfread_context pdfread_storage pdfread_download imgui::imgui glfw OpenGL::GL nfd::nfd
     PRIVATE pdfread_options
 )
 
@@ -99,6 +123,11 @@ target_link_libraries(pdfread_ui
 add_executable(pdfread_translate_cli ${PROJECT_SOURCE_DIR}/tools/translate_cli/main.cpp)
 set_target_properties(pdfread_translate_cli PROPERTIES OUTPUT_NAME pdfread-translate)
 target_link_libraries(pdfread_translate_cli PRIVATE pdfread_translate pdfread_options)
+
+# --- chương trình đánh giá chất lượng dịch (tools/eval) -------------------------
+add_executable(pdfread_eval ${PROJECT_SOURCE_DIR}/tools/eval/main.cpp)
+set_target_properties(pdfread_eval PROPERTIES OUTPUT_NAME pdfread-eval)
+target_link_libraries(pdfread_eval PRIVATE pdfread_translate pdfread_terminology pdfread_options)
 
 # --- app --------------------------------------------------------------------
 add_executable(pdfread

@@ -18,7 +18,9 @@
     },
     "libmupdf",
     "nlohmann-json",
-    "nativefiledialog-extended"
+    "nativefiledialog-extended",
+    "sqlite3",
+    "curl"
   ],
   "features": {
     "tests": {
