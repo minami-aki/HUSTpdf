@@ -78,6 +78,24 @@ Bổ sung cho [CLAUDE.md](../CLAUDE.md). Mỗi mục ghi ngày chốt; muốn đ
 
 **Khác:** giới hạn token sinh nâng lên 3× số token prompt + 32 (2× làm cụt bản dịch dài dòng của mô hình).
 
+## 2026-11-13 — M5: tầng 1, glossary, placeholder, hậu kiểm
+
+**Người dùng chốt:** soạn glossary nháp cho đủ 37 lĩnh vực (~30 thuật ngữ mỗi lĩnh vực, `source=draft`); glossary đọc vào bộ nhớ từ CSV (SQLite để M6); glossary của tài liệu là `<tên file>.glossary.csv` đặt cạnh PDF.
+
+**Đo với HY-MT1.5-1.8B Q4_K_M:**
+- Mẫu "chỉ định thuật ngữ" chính thức (`参考下面的翻译：… 翻译成 …`): 5 câu × 2 lần, **tuân thủ 100%** thuật ngữ (kể cả `keep_english`), bản dịch sát nghĩa hơn hẳn dịch thường ("Xung đột dữ liệu được giải quyết bằng cách chuyển tiếp, và bộ dự đoán rẽ nhánh…").
+- Placeholder: 5 dạng (`⟦X1⟧ {X1} [X1] @@X1@@ <X1>`) đều được giữ 8/8; chọn `⟦X1⟧` (không trùng chữ thật). Mô hình đôi khi bỏ dấu cách trước placeholder → khôi phục theo câu gốc. Thay từ thường bằng placeholder làm mất nghĩa (ví dụ "register" thành "sổ ghi chép") nên chỉ che công thức/mã/đại lượng/URL, không che tên biến đứng riêng.
+
+**Thiết kế:**
+- `data/domains.json` (nlohmann/json): 8 nhóm, 37 lĩnh vực con, 20–30 từ khóa mỗi lĩnh vực. Phân loại: Σ w·log2(1+số lần) theo từ khóa (cụm nhiều từ nặng hơn), đầu vào là mục lục (×2) và 3 trang đầu (3 đoạn đầu trang 1 ×3); trả tối đa 3 lĩnh vực có điểm ≥ 35% lĩnh vực cao nhất. Chạy trên luồng loader khi mở file (vài ms). Người dùng đổi được (chưa lưu theo file — M6 với SQLite).
+- Glossary: 4 tầng (người dùng > tài liệu > lĩnh vực chính > lĩnh vực phụ) + tầng "ngoài tài liệu" chỉ dùng làm nghĩa khác khi tra từ, không vào prompt. Khớp theo từ (không phân biệt hoa/thường, từ cuối chấp nhận số nhiều), ưu tiên cụm dài nhất, bỏ qua vùng placeholder. Thuật ngữ chưa có bản dịch không vào prompt. Glossary lĩnh vực chỉ đọc; sửa trong app ghi vào glossary người dùng hoặc tài liệu. File đổi trên đĩa được đọc lại khi cửa sổ app được focus lại.
+- Prompt khi có thuật ngữ: mẫu chỉ định thuật ngữ chính thức, chỉ các thuật ngữ có trong câu.
+- Hậu kiểm: thuật ngữ đã chỉ định không xuất hiện trong bản dịch (so không phân biệt hoa/thường tiếng Việt); placeholder mất / lặp / lạ → hiện trong popup.
+- Tra từ: vùng chọn ≤ 4 từ có trong glossary → hiện ngay (không gọi mô hình), kèm nghĩa ở lĩnh vực khác; nút "Dịch bằng mô hình", "Sửa thuật ngữ…".
+- Trích thuật ngữ tự động (luồng loader, tối đa 300 trang, display list không vào cache để khỏi đẩy trang đang xem ra): từ viết tắt có định nghĩa ("long form (ABBR)" và ngược lại, khớp chữ cái đầu), từ viết tắt lặp lại, cụm 2–4 từ lặp ≥ 2 lần; bỏ cụm con cùng tần suất. Hiện trong tab "Trích từ tài liệu", thêm vào glossary bằng một nút.
+- Phát hiện vùng không dịch (`text/protect`): công thức (token có ký hiệu toán làm nhân, mở rộng qua toán tử/số/tên biến ngắn/ngoặc), đại lượng (số + đơn vị trong danh sách, `25%`, `m/s`), mã (`foo()`, snake_case, camelCase, `0x…`, `::`, `->`), URL/email.
+- Gõ tiếng Việt trong cửa sổ glossary: chưa kiểm được (cần thao tác tay với bộ gõ). Dự kiến: Unikey/EVKey (gửi phím) dùng được; bộ gõ TSF của Windows có thể không hiện chữ đang soạn. Luôn có đường sửa CSV bằng Excel rồi quay lại app.
+
 ## Thông tin tham chiếu
 
 - vcpkg baseline: `177e8175121536d414f405ed8b3099b325a42638` (2026-11-11).

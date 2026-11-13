@@ -181,6 +181,11 @@ DisplayListPtr Document::display_list(int index) {
     return built;
 }
 
+DisplayListPtr Document::display_list_uncached(int index) {
+    if (index < 0 || index >= page_count()) throw Error(std::format("Trang {} không tồn tại", index + 1));
+    return build_display_list(index);  // trả bản trong cache nếu có, không thêm bản mới vào cache
+}
+
 DisplayListPtr Document::build_display_list(int index) {
     fz_context* c = require_ctx();
 
@@ -211,6 +216,34 @@ DisplayListPtr Document::build_display_list(int index) {
     }
     if (list == nullptr) fail(std::format("Không đọc được nội dung trang {}", index + 1), err);
     return std::make_shared<const DisplayList>(list);
+}
+
+std::vector<std::string> Document::outline_titles(std::size_t max_items) {
+    fz_context* c = require_ctx();
+    std::vector<std::string> out;
+    fz_outline* outline = nullptr;
+    {
+        std::lock_guard lock(doc_mutex_);
+        fz_var(outline);
+        fz_try(c) { outline = fz_load_outline(c, doc_); }
+        fz_catch(c) {
+            fz_report_error(c);
+            outline = nullptr;
+        }
+    }
+    if (outline == nullptr) return out;
+    // Duyệt trước (pre-order) không đệ quy: đẩy anh em trước, con sau -> con được duyệt trước.
+    std::vector<fz_outline*> stack{outline};
+    while (!stack.empty() && out.size() < max_items) {
+        fz_outline* node = stack.back();
+        stack.pop_back();
+        if (node == nullptr) continue;
+        if (node->title != nullptr && node->title[0] != '\0') out.emplace_back(node->title);
+        stack.push_back(node->next);
+        stack.push_back(node->down);
+    }
+    fz_drop_outline(c, outline);
+    return out;
 }
 
 // --- render / PNG -----------------------------------------------------------------

@@ -1,0 +1,31 @@
+term_en,term_vi,keep_english,notes,source
+nanomaterial,vật liệu nano,0,,draft
+nanoparticle,hạt nano,0,,draft
+nanowire,dây nano,0,,draft
+carbon nanotube,ống nano các bon,0,,draft
+graphene,graphene,1,,draft
+quantum dot,chấm lượng tử,0,,draft
+thin film,màng mỏng,0,,draft
+semiconductor,bán dẫn,0,,draft
+doping,pha tạp,0,,draft
+dopant,tạp chất pha,0,,draft
+silicon wafer,phiến silic,0,wafer,draft
+substrate,đế,0,,draft
+deposition,lắng đọng,0,,draft
+chemical vapor deposition,lắng đọng hơi hóa học,0,CVD,draft
+sputtering,phún xạ,0,,draft
+lithography,quang khắc,0,,draft
+etching,ăn mòn,0,khắc,draft
+annealing,ủ nhiệt,0,,draft
+perovskite,perovskite,1,,draft
+X-ray diffraction,nhiễu xạ tia X,0,XRD,draft
+scanning electron microscope,kính hiển vi điện tử quét,0,SEM,draft
+transmission electron microscope,kính hiển vi điện tử truyền qua,0,TEM,draft
+characterization,khảo sát đặc trưng,0,,draft
+band gap,độ rộng vùng cấm,0,,draft
+piezoelectric,áp điện,0,,draft
+ferroelectric,sắt điện,0,,draft
+carrier mobility,độ linh động hạt tải,0,,draft
+surface area,diện tích bề mặt,0,,draft
+synthesis,tổng hợp,0,,draft
+morphology,hình thái học,0,,draft

@@ -93,6 +93,13 @@ public:
 
     // Display list của trang, có cache LRU. Thread-safe. Ném pdf::Error khi lỗi.
     [[nodiscard]] DisplayListPtr display_list(int index);
+    // Như display_list() nhưng không đưa vào cache (cho tác vụ duyệt cả tài liệu ở nền,
+    // tránh đẩy các trang đang xem ra khỏi cache). Vẫn dùng bản có sẵn trong cache.
+    [[nodiscard]] DisplayListPtr display_list_uncached(int index);
+
+    // Tiêu đề các mục trong mục lục (outline) theo thứ tự, tối đa `max_items`. Rỗng nếu
+    // tài liệu không có mục lục. Thread-safe.
+    [[nodiscard]] std::vector<std::string> outline_titles(std::size_t max_items = 300);
     void set_display_list_capacity(std::size_t capacity);
 
 private:

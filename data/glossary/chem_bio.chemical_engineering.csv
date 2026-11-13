@@ -1,0 +1,31 @@
+term_en,term_vi,keep_english,notes,source
+chemical engineering,kỹ thuật hóa học,0,,draft
+unit operation,quá trình thiết bị,0,quá trình đơn vị,draft
+chemical reactor,thiết bị phản ứng,0,,draft
+distillation,chưng cất,0,,draft
+distillation column,tháp chưng cất,0,,draft
+absorption,hấp thụ,0,,draft
+adsorption,hấp phụ,0,,draft
+extraction,trích ly,0,chiết,draft
+mass transfer,truyền khối,0,,draft
+heat transfer,truyền nhiệt,0,,draft
+reaction kinetics,động học phản ứng,0,,draft
+rate constant,hằng số tốc độ,0,,draft
+catalyst,chất xúc tác,0,,draft
+mass balance,cân bằng vật chất,0,,draft
+energy balance,cân bằng năng lượng,0,,draft
+separation,phân tách,0,,draft
+packed column,tháp đệm,0,,draft
+fluidized bed,tầng sôi,0,,draft
+crystallization,kết tinh,0,,draft
+drying,sấy,0,,draft
+evaporation,cô đặc,0,bay hơi,draft
+filtration,lọc,0,,draft
+residence time,thời gian lưu,0,,draft
+yield,hiệu suất,0,hiệu suất sản phẩm,draft
+conversion,độ chuyển hóa,0,,draft
+selectivity,độ chọn lọc,0,,draft
+process design,thiết kế quá trình,0,,draft
+refinery,nhà máy lọc dầu,0,,draft
+petrochemical,hóa dầu,0,,draft
+scale-up,mở rộng quy mô,0,,draft

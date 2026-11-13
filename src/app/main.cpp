@@ -29,6 +29,7 @@
 #include "app/app.hpp"
 #include "pdf/context.hpp"
 #include "ui/fonts.hpp"
+#include "util/cmdline.hpp"
 #include "util/log.hpp"
 #include "util/thread_name.hpp"
 #include "util/utf8.hpp"
@@ -40,22 +41,6 @@
 namespace {
 
 using namespace pdfread;
-
-// Tham số dòng lệnh dạng UTF-8 (trên Windows argv là mã ANSI, mất dấu tiếng Việt).
-std::vector<std::string> utf8_args(int argc, char** argv) {
-    std::vector<std::string> out;
-#ifdef _WIN32
-    (void)argc;
-    (void)argv;
-    int n = 0;
-    LPWSTR* wargv = CommandLineToArgvW(GetCommandLineW(), &n);
-    for (int i = 0; i < n; ++i) out.push_back(path_to_utf8(std::filesystem::path(wargv[i])));
-    LocalFree(wargv);
-#else
-    for (int i = 0; i < argc; ++i) out.emplace_back(argv[i]);
-#endif
-    return out;
-}
 
 std::filesystem::path executable_dir() {
 #ifdef _WIN32
@@ -156,6 +141,8 @@ int run(const std::vector<std::string>& args) {
             options.add_generation_prompt = true;
         } else if (a == "--repack") {
             options.repack_weights = true;
+        } else if (a == "--glossary") {
+            options.open_glossary = true;
         } else if (a == "--context") {
             options.include_context = true;
         } else if (a == "--select") {
@@ -168,7 +155,8 @@ int run(const std::vector<std::string>& args) {
             log::warn("Bỏ qua tham số không rõ: {}", a);
         }
     }
-    options.font_dir = find_data_dir() / "fonts";
+    options.data_dir = find_data_dir();
+    options.font_dir = options.data_dir / "fonts";
     options.model_search_dirs.push_back(executable_dir() / "models");
 #ifdef PDFREAD_SOURCE_DATA_DIR
     options.model_search_dirs.push_back(path_from_utf8(PDFREAD_SOURCE_DATA_DIR).parent_path() / "models");

@@ -1,0 +1,34 @@
+term_en,term_vi,keep_english,notes,source
+machining,gia công cắt gọt,0,,draft
+machine tool,máy công cụ,0,,draft
+cutting tool,dụng cụ cắt,0,,draft
+lathe,máy tiện,0,,draft
+turning,tiện,0,nguyên công tiện,draft
+milling,phay,0,,draft
+milling machine,máy phay,0,,draft
+drilling,khoan,0,,draft
+grinding,mài,0,,draft
+workpiece,phôi,0,chi tiết đang gia công,draft
+fixture,đồ gá,0,,draft
+jig,đồ gá dẫn hướng,0,,draft
+spindle,trục chính,0,,draft
+feed rate,lượng chạy dao,0,,draft
+cutting speed,vận tốc cắt,0,,draft
+depth of cut,chiều sâu cắt,0,,draft
+tool wear,mòn dao,0,,draft
+tool life,tuổi bền dao,0,,draft
+surface roughness,độ nhám bề mặt,0,,draft
+tolerance,dung sai,0,,draft
+fit,lắp ghép,0,,draft
+clearance,độ hở,0,trong lắp ghép,draft
+interference fit,lắp có độ dôi,0,,draft
+casting,đúc,0,,draft
+forging,rèn,0,,draft
+welding,hàn,0,,draft
+stamping,dập,0,,draft
+sheet metal,kim loại tấm,0,,draft
+CNC,CNC,1,điều khiển số bằng máy tính,draft
+G-code,G-code,1,,draft
+gear,bánh răng,0,,draft
+bearing,ổ lăn,0,ổ trục; ổ bi,draft
+shaft,trục,0,,draft

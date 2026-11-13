@@ -1,0 +1,33 @@
+term_en,term_vi,keep_english,notes,source
+processor,bộ xử lý,0,,draft
+microarchitecture,vi kiến trúc,0,,draft
+instruction set architecture,kiến trúc tập lệnh,0,ISA,draft
+instruction,lệnh,0,,draft
+pipeline,đường ống,0,pipeline lệnh,draft
+data hazard,xung đột dữ liệu,0,,draft
+control hazard,xung đột điều khiển,0,,draft
+structural hazard,xung đột cấu trúc,0,,draft
+forwarding,chuyển tiếp,0,forwarding dữ liệu,draft
+stall,khựng,0,dừng đường ống,draft
+branch predictor,bộ dự đoán rẽ nhánh,0,,draft
+branch prediction,dự đoán rẽ nhánh,0,,draft
+out-of-order execution,thực thi không theo thứ tự,0,,draft
+cache,bộ nhớ đệm,0,cache,draft
+cache miss,trượt bộ nhớ đệm,0,cache miss,draft
+cache hit,trúng bộ nhớ đệm,0,cache hit,draft
+register,thanh ghi,0,,draft
+register file,tệp thanh ghi,0,,draft
+memory hierarchy,phân cấp bộ nhớ,0,,draft
+bus,bus,1,đường truyền dữ liệu,draft
+interrupt,ngắt,0,,draft
+embedded system,hệ thống nhúng,0,,draft
+firmware,firmware,1,,draft
+microcontroller,vi điều khiển,0,,draft
+system on chip,hệ thống trên chip,0,SoC,draft
+FPGA,FPGA,1,mảng cổng lập trình được,draft
+multicore,đa lõi,0,,draft
+core,lõi,0,lõi xử lý,draft
+clock cycle,chu kỳ xung nhịp,0,,draft
+throughput,thông lượng,0,,draft
+latency,độ trễ,0,,draft
+memory-mapped,ánh xạ bộ nhớ,0,,draft

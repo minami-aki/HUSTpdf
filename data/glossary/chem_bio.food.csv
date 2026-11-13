@@ -1,0 +1,31 @@
+term_en,term_vi,keep_english,notes,source
+food processing,chế biến thực phẩm,0,,draft
+food safety,an toàn thực phẩm,0,,draft
+shelf life,thời hạn sử dụng,0,,draft
+pasteurization,thanh trùng,0,,draft
+sterilization,tiệt trùng,0,,draft
+preservation,bảo quản,0,,draft
+food additive,phụ gia thực phẩm,0,,draft
+nutrition,dinh dưỡng,0,,draft
+protein,protein,1,,draft
+carbohydrate,cacbohydrat,0,,draft
+lipid,lipid,1,chất béo,draft
+dietary fiber,chất xơ,0,,draft
+moisture content,độ ẩm,0,hàm ẩm,draft
+water activity,hoạt độ nước,0,,draft
+spoilage,hư hỏng,0,,draft
+microbial contamination,nhiễm vi sinh vật,0,,draft
+sensory evaluation,đánh giá cảm quan,0,,draft
+texture,cấu trúc,0,kết cấu thực phẩm,draft
+emulsion,nhũ tương,0,,draft
+freezing,lạnh đông,0,,draft
+thawing,rã đông,0,,draft
+drying,sấy,0,,draft
+packaging,bao gói,0,,draft
+HACCP,HACCP,1,phân tích mối nguy và điểm kiểm soát tới hạn,draft
+dairy product,sản phẩm sữa,0,,draft
+beverage,đồ uống,0,,draft
+fermentation,lên men,0,,draft
+antioxidant,chất chống oxi hóa,0,,draft
+raw material,nguyên liệu,0,,draft
+yield,hiệu suất thu hồi,0,,draft

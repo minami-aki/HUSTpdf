@@ -1,0 +1,31 @@
+term_en,term_vi,keep_english,notes,source
+heat transfer,truyền nhiệt,0,,draft
+thermodynamics,nhiệt động học,0,,draft
+heat exchanger,thiết bị trao đổi nhiệt,0,,draft
+refrigeration,kỹ thuật lạnh,0,làm lạnh,draft
+refrigerant,môi chất lạnh,0,,draft
+compressor,máy nén,0,,draft
+evaporator,dàn bay hơi,0,,draft
+condenser,dàn ngưng,0,,draft
+expansion valve,van tiết lưu,0,,draft
+heat pump,bơm nhiệt,0,,draft
+air conditioning,điều hòa không khí,0,,draft
+HVAC,HVAC,1,"sưởi, thông gió và điều hòa không khí",draft
+boiler,lò hơi,0,,draft
+steam,hơi nước,0,,draft
+enthalpy,entanpi,0,,draft
+entropy,entropi,0,,draft
+specific heat,nhiệt dung riêng,0,,draft
+thermal conductivity,hệ số dẫn nhiệt,0,,draft
+convection,đối lưu,0,,draft
+conduction,dẫn nhiệt,0,,draft
+radiation,bức xạ nhiệt,0,,draft
+heat flux,mật độ dòng nhiệt,0,,draft
+coefficient of performance,hệ số làm lạnh,0,COP,draft
+Rankine cycle,chu trình Rankine,0,,draft
+Carnot cycle,chu trình Carnot,0,,draft
+turbine,tua bin,0,,draft
+cooling tower,tháp giải nhiệt,0,,draft
+psychrometric chart,đồ thị không khí ẩm,0,,draft
+relative humidity,độ ẩm tương đối,0,,draft
+insulation,cách nhiệt,0,,draft

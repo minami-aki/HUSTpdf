@@ -20,7 +20,7 @@ Pdfread phát hành theo AGPL-3.0. Dự án dùng (hoặc dự kiến dùng) cá
 | Noto Sans, Noto Sans Math (`data/fonts`, kèm `OFL.txt`) | SIL OFL-1.1 | font giao diện | đang dùng (M1) |
 | llama.cpp / ggml (v0.9.0) | MIT | suy luận mô hình dịch (DLL cạnh exe) | đang dùng (M3) |
 | Microsoft Visual C++ Runtime (`vcruntime140*.dll`, `msvcp140.dll`) | Microsoft VC++ Redistributable license | cần cho các DLL llama.cpp/ggml (build `/MD`) | cần đóng gói app-local hoặc yêu cầu VC Redist (M6) |
-| nlohmann/json | MIT | đọc `data/domains.json`, cài đặt | dự kiến (M5) |
+| nlohmann/json 3.12 | MIT | đọc `data/domains.json` | đang dùng (M5) |
 | SQLite | Public domain | cache, glossary, cài đặt | dự kiến (M6) |
 | libcurl | curl (MIT-like) | tải mô hình lần đầu | dự kiến (M6) |
 | Catch2 v3 | BSL-1.0 | chỉ dùng cho unit test, không vào bản phát hành | đang dùng (M0) |

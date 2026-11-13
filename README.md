@@ -13,7 +13,7 @@ Trình đọc PDF khoa học – kỹ thuật, dịch Anh → Việt tức thờ
 | M2 | Bôi đen, tô sáng, lấy text | xong |
 | M3 | llama.cpp + HY-MT1.5, popup dịch streaming | xong |
 | M4 | Tầng 2: làm sạch, tách câu, ngữ cảnh | xong (ngữ cảnh viết sẵn nhưng tắt mặc định, xem DECISIONS) |
-| M5 | Tầng 1: lĩnh vực, glossary, placeholder, hậu kiểm | chưa |
+| M5 | Tầng 1: lĩnh vực, glossary, placeholder, hậu kiểm | xong (glossary 37 lĩnh vực là bản nháp, cần duyệt) |
 | M6 | Cache SQLite, tải mô hình, đánh giá, CI | chưa |
 
 ## Build (Windows)
@@ -42,6 +42,17 @@ Mọi file chạy và DLL nằm chung trong `build/<preset>/bin/`: `pdfread.exe`
 
 Không đóng gói kèm. Tải `HY-MT1.5-1.8B-Q4_K_M.gguf` (1,13 GB) từ [tencent/HY-MT1.5-1.8B-GGUF](https://huggingface.co/tencent/HY-MT1.5-1.8B-GGUF) (giấy phép Tencent HY Community License) và đặt vào thư mục `models/` (cạnh `pdfread.exe` hoặc ở gốc dự án khi phát triển; `models/` nằm trong `.gitignore`), hoặc chọn file bằng nút **Mô hình…**. SHA-256: `4383ac0c3c8e476de98ff979c2a3f069f8c4fb385e7860cf2d28da896cc477c7`.
 
+## Lĩnh vực và glossary
+
+- `data/domains.json`: 8 nhóm, 37 lĩnh vực con (tên, từ khóa phân loại, file glossary). Khi mở PDF, app phân loại lĩnh vực (tối đa 3, có độ tin cậy) theo mục lục và 3 trang đầu; đổi được ở ô **Lĩnh vực** trên toolbar.
+- Glossary là file CSV UTF-8, cột `term_en,term_vi,keep_english,notes,source` (sửa bằng Excel/trình soạn thảo được; quay lại app là tự nạp lại):
+  - `data/glossary/<lĩnh vực>.csv` — glossary lĩnh vực (hiện là **bản nháp** `source=draft`, ~30 thuật ngữ mỗi lĩnh vực, cần duyệt);
+  - `%APPDATA%\Pdfread\glossary\user.csv` — glossary của bạn (ưu tiên cao nhất);
+  - `<tên file>.glossary.csv` cạnh PDF — glossary của tài liệu.
+- Thứ tự ưu tiên: của bạn > tài liệu > lĩnh vực điểm cao nhất > lĩnh vực khác của tài liệu. Thuật ngữ thuộc lĩnh vực ngoài tài liệu chỉ hiện ở "Nghĩa khác" khi tra từ.
+- Khi dịch: chỉ các thuật ngữ thực sự có trong câu được đưa vào prompt (mẫu "chỉ định thuật ngữ" của HY-MT1.5); công thức, mã, đại lượng có đơn vị, URL được thay bằng placeholder `⟦F1⟧ ⟦C1⟧ ⟦U1⟧ ⟦L1⟧` rồi khôi phục; popup báo thuật ngữ dịch sai và ký hiệu bị mất.
+- Bôi đen một từ/cụm ngắn có trong glossary: hiện nghĩa ngay (không gọi mô hình), kèm nghĩa ở lĩnh vực khác.
+
 ## Chạy
 
 ```powershell
@@ -63,6 +74,7 @@ Không đóng gói kèm. Tải `HY-MT1.5-1.8B-Q4_K_M.gguf` (1,13 GB) từ [tence
 | Shift + nhấn | Mở rộng vùng chọn tới điểm nhấn |
 | Ctrl+C, Esc | Sao chép vùng chọn, bỏ chọn |
 | (thả chuột) / Ctrl+T | Dịch vùng chọn: tự động sau 250 ms nếu bật "Dịch tự động", hoặc thủ công |
+| Ctrl+G | Mở cửa sổ glossary (xem, tìm, sửa, nhập/xuất CSV, thuật ngữ trích từ tài liệu) |
 | | Bôi đen một phần câu: dịch cả câu (tô vàng nhạt trên trang); đổi sang "chỉ phần chọn" ngay trong popup. Một từ / cụm ≤ 4 từ: dịch đúng phần chọn |
 
 Tham số mô hình: `--threads N` số luồng suy luận (mặc định = số nhân vật lý, tối đa 8); `--repack` sắp xếp lại trọng số cho AVX2/AVX-512 (prompt dài xử lý nhanh hơn nhưng tốn thêm ~700 MB RAM); `--gen-prompt` kết thúc prompt bằng `<｜hy_Assistant｜>` thay vì như ví dụ chính thức; `--context` (thử nghiệm) thêm 1 câu trước/sau vào prompt bằng mẫu ngữ cảnh — mặc định tắt vì làm hỏng bản dịch với mô hình 1.8B Q4.
@@ -80,6 +92,7 @@ Công cụ kiểm thử:
 # Dịch thử không cần giao diện (stdin: mỗi dòng một câu):
 .\build\release\bin\pdfread-translate.exe --model models\HY-MT1.5-1.8B-Q4_K_M.gguf "The kernel schedules threads."
 .\build\release\bin\pdfread-translate.exe --model ... --context "câu xung quanh" --term "stress=ứng suất" "..."
+.\build\release\bin\pdfread.exe sample.pdf --glossary --snapshot out.png   # mở sẵn cửa sổ glossary
 # Test với mô hình thật (mặc định bị ẩn):
 $env:PDFREAD_TEST_MODEL = "models\HY-MT1.5-1.8B-Q4_K_M.gguf"; .\build\release\bin\pdfread_tests.exe "[model]"
 ```

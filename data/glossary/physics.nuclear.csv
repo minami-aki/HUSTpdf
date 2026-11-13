@@ -1,0 +1,31 @@
+term_en,term_vi,keep_english,notes,source
+nuclear reactor,lò phản ứng hạt nhân,0,,draft
+neutron,nơtron,0,,draft
+proton,proton,1,,draft
+nuclear fission,phân hạch hạt nhân,0,,draft
+nuclear fusion,tổng hợp hạt nhân,0,nhiệt hạch,draft
+chain reaction,phản ứng dây chuyền,0,,draft
+radioactivity,phóng xạ,0,,draft
+radioactive decay,phân rã phóng xạ,0,,draft
+isotope,đồng vị,0,,draft
+half-life,chu kỳ bán rã,0,,draft
+ionizing radiation,bức xạ ion hóa,0,,draft
+gamma ray,tia gamma,0,,draft
+alpha particle,hạt alpha,0,,draft
+beta particle,hạt beta,0,,draft
+absorbed dose,liều hấp thụ,0,,draft
+equivalent dose,liều tương đương,0,,draft
+dosimetry,đo liều,0,,draft
+radiation protection,an toàn bức xạ,0,,draft
+shielding,che chắn,0,,draft
+fuel rod,thanh nhiên liệu,0,,draft
+control rod,thanh điều khiển,0,,draft
+moderator,chất làm chậm,0,,draft
+coolant,chất tải nhiệt,0,,draft
+criticality,tới hạn,0,trạng thái tới hạn,draft
+cross section,tiết diện,0,tiết diện phản ứng,draft
+neutron flux,thông lượng nơtron,0,,draft
+enrichment,làm giàu,0,làm giàu urani,draft
+spent fuel,nhiên liệu đã qua sử dụng,0,,draft
+detector,đầu dò,0,,draft
+nuclear medicine,y học hạt nhân,0,,draft

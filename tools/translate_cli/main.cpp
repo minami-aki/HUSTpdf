@@ -18,6 +18,7 @@
 #endif
 
 #include "translate/llama_translator.hpp"
+#include "util/cmdline.hpp"
 #include "util/log.hpp"
 #include "util/utf8.hpp"
 
@@ -32,9 +33,11 @@ int main(int argc, char** argv) {
     translate::TranslateRequest base;
     std::vector<std::string> inputs;
     bool raw = false;  // --raw: gửi nguyên văn làm tin nhắn user (thử mẫu prompt khác); "\n" trong tham số = xuống dòng
-    for (int i = 1; i < argc; ++i) {
-        const std::string a = argv[i];
-        auto next = [&]() -> std::string { return i + 1 < argc ? argv[++i] : std::string(); };
+    const std::vector<std::string> args = utf8_args(argc, argv);
+    const std::size_t nargs = args.size();
+    for (std::size_t i = 1; i < nargs; ++i) {
+        const std::string a = args[i];
+        auto next = [&]() -> std::string { return i + 1 < nargs ? args[++i] : std::string(); };
         if (a == "--model") config.model_path = path_from_utf8(next());
         else if (a == "--threads") config.threads = std::atoi(next().c_str());
         else if (a == "--gen-prompt") config.add_generation_prompt = true;

@@ -1,0 +1,33 @@
+term_en,term_vi,keep_english,notes,source
+power system,hệ thống điện,0,,draft
+power grid,lưới điện,0,,draft
+transmission line,đường dây truyền tải,0,,draft
+distribution network,lưới phân phối,0,,draft
+transformer,máy biến áp,0,,draft
+substation,trạm biến áp,0,,draft
+generator,máy phát điện,0,,draft
+synchronous machine,máy điện đồng bộ,0,,draft
+induction motor,động cơ không đồng bộ,0,động cơ cảm ứng,draft
+load flow,phân bố công suất,0,trào lưu công suất,draft
+power flow,trào lưu công suất,0,,draft
+short circuit,ngắn mạch,0,,draft
+protection relay,rơ le bảo vệ,0,,draft
+circuit breaker,máy cắt,0,,draft
+bus,thanh cái,0,nút trong sơ đồ hệ thống điện,draft
+busbar,thanh cái,0,,draft
+active power,công suất tác dụng,0,,draft
+reactive power,công suất phản kháng,0,,draft
+apparent power,công suất biểu kiến,0,,draft
+power factor,hệ số công suất,0,,draft
+three-phase,ba pha,0,,draft
+phase,pha,0,,draft
+voltage stability,ổn định điện áp,0,,draft
+frequency control,điều chỉnh tần số,0,,draft
+renewable energy,năng lượng tái tạo,0,,draft
+photovoltaic,quang điện,0,pin mặt trời,draft
+wind turbine,tua bin gió,0,,draft
+inverter,bộ nghịch lưu,0,,draft
+rectifier,bộ chỉnh lưu,0,,draft
+smart grid,lưới điện thông minh,0,,draft
+harmonics,sóng hài,0,,draft
+grounding,nối đất,0,,draft

@@ -1,0 +1,31 @@
+term_en,term_vi,keep_english,notes,source
+information system,hệ thống thông tin,0,,draft
+database,cơ sở dữ liệu,0,,draft
+relational database,cơ sở dữ liệu quan hệ,0,,draft
+query,truy vấn,0,,draft
+transaction,giao dịch,0,giao tác (CSDL),draft
+schema,lược đồ,0,,draft
+primary key,khóa chính,0,,draft
+foreign key,khóa ngoại,0,,draft
+index,chỉ mục,0,,draft
+normalization,chuẩn hóa,0,,draft
+data warehouse,kho dữ liệu,0,,draft
+ETL,ETL,1,"trích xuất, biến đổi, nạp dữ liệu",draft
+NoSQL,NoSQL,1,,draft
+SQL,SQL,1,,draft
+ERP,ERP,1,hoạch định nguồn lực doanh nghiệp,draft
+CRM,CRM,1,quản lý quan hệ khách hàng,draft
+business process,quy trình nghiệp vụ,0,,draft
+requirement,yêu cầu,0,,draft
+use case,ca sử dụng,0,,draft
+UML,UML,1,ngôn ngữ mô hình hóa thống nhất,draft
+software engineering,công nghệ phần mềm,0,,draft
+web service,dịch vụ web,0,,draft
+REST,REST,1,,draft
+microservice,vi dịch vụ,0,microservice,draft
+cloud computing,điện toán đám mây,0,,draft
+user interface,giao diện người dùng,0,,draft
+backend,backend,1,phần phía máy chủ,draft
+frontend,frontend,1,phần giao diện,draft
+stakeholder,bên liên quan,0,,draft
+data model,mô hình dữ liệu,0,,draft

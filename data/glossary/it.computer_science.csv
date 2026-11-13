@@ -1,0 +1,32 @@
+term_en,term_vi,keep_english,notes,source
+algorithm,thuật toán,0,,draft
+time complexity,độ phức tạp thời gian,0,,draft
+space complexity,độ phức tạp không gian,0,,draft
+data structure,cấu trúc dữ liệu,0,,draft
+array,mảng,0,,draft
+linked list,danh sách liên kết,0,,draft
+stack,ngăn xếp,0,,draft
+queue,hàng đợi,0,,draft
+hash table,bảng băm,0,,draft
+binary tree,cây nhị phân,0,,draft
+graph,đồ thị,0,,draft
+recursion,đệ quy,0,,draft
+dynamic programming,quy hoạch động,0,,draft
+greedy algorithm,thuật toán tham lam,0,,draft
+sorting,sắp xếp,0,,draft
+compiler,trình biên dịch,0,,draft
+interpreter,trình thông dịch,0,,draft
+operating system,hệ điều hành,0,,draft
+kernel,nhân,0,nhân hệ điều hành,draft
+process,tiến trình,0,,draft
+thread,luồng,0,,draft
+scheduling,lập lịch,0,,draft
+concurrency,tính đồng thời,0,,draft
+deadlock,bế tắc,0,deadlock,draft
+mutex,mutex,1,khóa loại trừ lẫn nhau,draft
+virtual memory,bộ nhớ ảo,0,,draft
+distributed system,hệ phân tán,0,,draft
+NP-hard,NP-khó,0,,draft
+finite automaton,ôtômat hữu hạn,0,,draft
+runtime,thời gian chạy,0,,draft
+API,API,1,giao diện lập trình ứng dụng,draft

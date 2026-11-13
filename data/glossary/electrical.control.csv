@@ -1,0 +1,34 @@
+term_en,term_vi,keep_english,notes,source
+controller,bộ điều khiển,0,,draft
+control system,hệ thống điều khiển,0,,draft
+PID controller,bộ điều khiển PID,0,,draft
+proportional-integral-derivative,tỷ lệ - tích phân - vi phân,0,PID,draft
+transfer function,hàm truyền,0,,draft
+closed-loop,vòng kín,0,,draft
+open-loop,vòng hở,0,,draft
+feedback,phản hồi,0,hồi tiếp,draft
+setpoint,giá trị đặt,0,,draft
+plant,đối tượng điều khiển,0,,draft
+process variable,biến quá trình,0,,draft
+error,sai lệch,0,sai số điều khiển,draft
+steady-state error,sai số xác lập,0,,draft
+overshoot,độ quá điều chỉnh,0,,draft
+settling time,thời gian xác lập,0,,draft
+rise time,thời gian tăng,0,,draft
+step response,đáp ứng bậc thang,0,,draft
+stability,tính ổn định,0,,draft
+state space,không gian trạng thái,0,,draft
+state observer,bộ quan sát trạng thái,0,,draft
+Kalman filter,bộ lọc Kalman,0,,draft
+model predictive control,điều khiển dự báo theo mô hình,0,MPC,draft
+robust control,điều khiển bền vững,0,,draft
+adaptive control,điều khiển thích nghi,0,,draft
+gain margin,dự trữ biên độ,0,,draft
+phase margin,dự trữ pha,0,,draft
+Bode plot,biểu đồ Bode,0,,draft
+root locus,quỹ đạo nghiệm số,0,,draft
+pole,điểm cực,0,,draft
+zero,điểm không,0,,draft
+disturbance,nhiễu loạn,0,,draft
+tuning,chỉnh định,0,,draft
+gain,hệ số khuếch đại,0,,draft

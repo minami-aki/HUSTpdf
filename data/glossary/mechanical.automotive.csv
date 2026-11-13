@@ -1,0 +1,31 @@
+term_en,term_vi,keep_english,notes,source
+internal combustion engine,động cơ đốt trong,0,,draft
+engine,động cơ,0,,draft
+piston,piston,1,,draft
+cylinder,xi lanh,0,,draft
+crankshaft,trục khuỷu,0,,draft
+camshaft,trục cam,0,,draft
+connecting rod,thanh truyền,0,,draft
+combustion chamber,buồng cháy,0,,draft
+fuel injection,phun nhiên liệu,0,,draft
+injector,vòi phun,0,,draft
+turbocharger,bộ tăng áp,0,,draft
+spark ignition,đánh lửa cưỡng bức,0,,draft
+compression ratio,tỷ số nén,0,,draft
+transmission,hộp số,0,hệ thống truyền lực,draft
+gearbox,hộp số,0,,draft
+clutch,ly hợp,0,,draft
+drivetrain,hệ thống truyền động,0,,draft
+powertrain,hệ thống truyền lực,0,,draft
+differential,vi sai,0,bộ vi sai,draft
+chassis,khung gầm,0,,draft
+suspension,hệ thống treo,0,,draft
+steering,hệ thống lái,0,,draft
+brake,phanh,0,,draft
+ABS,ABS,1,hệ thống chống bó cứng phanh,draft
+tire,lốp,0,,draft
+torque,mô men xoắn,0,,draft
+emission,khí thải,0,,draft
+electric vehicle,xe điện,0,,draft
+hybrid electric vehicle,xe điện hybrid,0,,draft
+fuel consumption,suất tiêu hao nhiên liệu,0,,draft

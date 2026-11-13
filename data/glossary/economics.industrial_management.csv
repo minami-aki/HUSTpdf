@@ -1,0 +1,31 @@
+term_en,term_vi,keep_english,notes,source
+operations management,quản trị vận hành,0,,draft
+production planning,lập kế hoạch sản xuất,0,,draft
+scheduling,lập lịch,0,điều độ sản xuất,draft
+inventory,hàng tồn kho,0,,draft
+inventory control,kiểm soát tồn kho,0,,draft
+supply chain,chuỗi cung ứng,0,,draft
+logistics,logistics,1,hậu cần,draft
+lean manufacturing,sản xuất tinh gọn,0,,draft
+Six Sigma,Six Sigma,1,,draft
+quality control,kiểm soát chất lượng,0,,draft
+quality assurance,đảm bảo chất lượng,0,,draft
+total quality management,quản lý chất lượng toàn diện,0,TQM,draft
+kaizen,kaizen,1,cải tiến liên tục,draft
+just-in-time,đúng thời điểm,0,JIT,draft
+bottleneck,điểm nghẽn,0,,draft
+throughput,năng suất đầu ra,0,thông lượng,draft
+lead time,thời gian chờ,0,thời gian sản xuất,draft
+cycle time,thời gian chu kỳ,0,,draft
+capacity planning,hoạch định công suất,0,,draft
+demand forecasting,dự báo nhu cầu,0,,draft
+facility layout,bố trí mặt bằng,0,,draft
+preventive maintenance,bảo trì phòng ngừa,0,,draft
+ergonomics,công thái học,0,,draft
+work study,nghiên cứu công việc,0,,draft
+key performance indicator,chỉ số đo lường hiệu suất,0,KPI,draft
+standard operating procedure,quy trình thao tác chuẩn,0,SOP,draft
+defect,khuyết tật,0,lỗi sản phẩm,draft
+yield,tỷ lệ thành phẩm,0,,draft
+productivity,năng suất,0,,draft
+continuous improvement,cải tiến liên tục,0,,draft

@@ -1,0 +1,31 @@
+term_en,term_vi,keep_english,notes,source
+quantum mechanics,cơ học lượng tử,0,,draft
+wave function,hàm sóng,0,,draft
+electron,electron,1,điện tử,draft
+photon,photon,1,,draft
+phonon,phonon,1,,draft
+band gap,độ rộng vùng cấm,0,,draft
+conduction band,vùng dẫn,0,,draft
+valence band,vùng hóa trị,0,,draft
+Fermi level,mức Fermi,0,,draft
+crystal lattice,mạng tinh thể,0,,draft
+solid-state physics,vật lý chất rắn,0,,draft
+semiconductor,bán dẫn,0,,draft
+electromagnetic field,trường điện từ,0,,draft
+electric field,điện trường,0,,draft
+magnetic field,từ trường,0,,draft
+Maxwell's equations,hệ phương trình Maxwell,0,,draft
+dielectric,điện môi,0,,draft
+permittivity,độ điện thẩm,0,hằng số điện môi,draft
+permeability,độ từ thẩm,0,,draft
+superconductor,chất siêu dẫn,0,,draft
+plasma,plasma,1,,draft
+spectroscopy,quang phổ học,0,,draft
+thin film,màng mỏng,0,,draft
+vacuum,chân không,0,,draft
+acoustics,âm học,0,,draft
+ultrasonic,siêu âm,0,,draft
+measurement uncertainty,độ không đảm bảo đo,0,,draft
+calibration,hiệu chuẩn,0,,draft
+phase,pha,0,pha dao động,draft
+resolution,độ phân giải,0,,draft

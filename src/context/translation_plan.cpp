@@ -142,14 +142,50 @@ std::optional<TranslationPlan> make_plan(const PageText& page, Span selected, co
     plan.expanded = plan.translated != selected;
 
     // Text gửi đi: thay '\n' (ranh giới đoạn) bằng dấu cách; cắt bớt nếu quá dài.
-    std::string text = page.utf8(plan.translated);
-    std::replace(text.begin(), text.end(), '\n', ' ');
-    if (utf8_length(text) > options.max_chars) {
-        text = utf8_truncate(text, options.max_chars);
+    std::u32string u(std::u32string_view(page.text()).substr(plan.translated.begin, plan.translated.size()));
+    std::replace(u.begin(), u.end(), U'\n', U' ');
+    if (u.size() > options.max_chars) {
+        u.resize(options.max_chars);
         plan.truncated = true;
     }
-    if (text.empty()) return std::nullopt;
-    plan.request.text = std::move(text);
+    if (u.empty()) return std::nullopt;
+    plan.source = to_utf8(u);
+
+    // Vùng không dịch (công thức, mã, đơn vị…) -> placeholder.
+    const std::vector<text::ProtectedSpan> protected_spans =
+        options.protect ? text::find_protected(u) : std::vector<text::ProtectedSpan>{};
+
+    // Thuật ngữ glossary thực sự có trong text (ngoài vùng không dịch). Chỉ thuật ngữ đã xác
+    // nhận và thuộc người dùng / tài liệu / lĩnh vực của tài liệu mới vào prompt.
+    if (options.glossary != nullptr) {
+        std::vector<text::Span> excluded;
+        for (const auto& p : protected_spans) excluded.push_back(p.span);
+        for (const terminology::TermMatch& m : options.glossary->find_in(u, excluded)) {
+            const terminology::GlossaryEntry& e = *m.entry;
+            if (!e.confirmed() || e.layer == terminology::Layer::Unrelated) continue;
+            const bool dup = std::any_of(plan.terms.begin(), plan.terms.end(),
+                                         [&](const auto& t) { return t.term_en == e.term_en; });
+            if (dup) continue;
+            plan.terms.push_back(e);
+            plan.request.terms.push_back({e.term_en, e.term_vi, e.keep_english});
+        }
+    }
+    plan.request.domains = options.domains;
+
+    text::Placeholdered ph = text::apply_placeholders(u, protected_spans);
+    plan.request.text = std::move(ph.text);
+    plan.placeholders = std::move(ph.placeholders);
+
+    // Từ / cụm ngắn: tra glossary trước (kể cả lĩnh vực ngoài tài liệu, để hiện nghĩa khác).
+    if (plan.kind == SelectionKind::Term && options.glossary != nullptr) {
+        const std::u32string sel(std::u32string_view(page.text()).substr(selected.begin, selected.size()));
+        if (auto m = options.glossary->lookup(sel); m && m->entry->confirmed()) {
+            GlossaryAnswer a;
+            a.entry = *m->entry;
+            for (const auto* alt : m->alternatives) a.alternatives.push_back(*alt);
+            plan.glossary_answer = std::move(a);
+        }
+    }
 
     if (options.include_context) {
         plan.request.context = surrounding_context(page, plan.translated, options.context_sentences_before,

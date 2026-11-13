@@ -1,0 +1,321 @@
+{
+  "version": 1,
+  "notes": "Bảng phân loại lĩnh vực (tầng 1). keywords: từ khóa tiếng Anh đặc trưng để phân loại tài liệu (không phân biệt hoa/thường, chấp nhận số nhiều). glossary: đường dẫn tương đối tới file CSV (term_en, term_vi, keep_english, notes, source).",
+  "groups": [
+    {
+      "id": "mechanical",
+      "name_vi": "Cơ khí",
+      "name_en": "Mechanical engineering",
+      "subdomains": [
+        {
+          "id": "mechanical.manufacturing",
+          "name_vi": "Cơ khí chế tạo máy",
+          "name_en": "Manufacturing engineering",
+          "keywords": ["machining", "cutting tool", "lathe", "milling", "turning", "drilling", "grinding", "cnc", "machine tool", "tolerance", "surface roughness", "fixture", "jig", "spindle", "feed rate", "cutting speed", "tool wear", "workpiece", "casting", "forging", "welding", "sheet metal", "stamping", "manufacturing process", "gear", "bearing", "shaft", "assembly", "cad/cam", "g-code"],
+          "glossary": "glossary/mechanical.manufacturing.csv"
+        },
+        {
+          "id": "mechanical.mechatronics",
+          "name_vi": "Cơ điện tử",
+          "name_en": "Mechatronics",
+          "keywords": ["mechatronics", "mechatronic", "actuator", "servo motor", "stepper motor", "encoder", "robot", "robotic", "manipulator", "end effector", "kinematics", "inverse kinematics", "degree of freedom", "gripper", "microcontroller", "sensor fusion", "plc", "linear actuator", "ball screw", "harmonic drive", "trajectory planning", "joint", "embedded control", "motion control", "dc motor", "pwm"],
+          "glossary": "glossary/mechanical.mechatronics.csv"
+        },
+        {
+          "id": "mechanical.engineering_mechanics",
+          "name_vi": "Cơ học kỹ thuật",
+          "name_en": "Engineering mechanics",
+          "keywords": ["stress", "strain", "von mises", "elasticity", "plasticity", "young's modulus", "poisson's ratio", "beam", "deflection", "bending moment", "shear force", "torsion", "buckling", "finite element", "fem", "yield strength", "fatigue", "fracture", "crack", "vibration", "natural frequency", "damping", "statics", "dynamics", "moment of inertia", "rigid body", "boundary condition", "constitutive"],
+          "glossary": "glossary/mechanical.engineering_mechanics.csv"
+        },
+        {
+          "id": "mechanical.automotive",
+          "name_vi": "Kỹ thuật ô tô / động lực",
+          "name_en": "Automotive and power engineering",
+          "keywords": ["vehicle", "automotive", "engine", "internal combustion", "combustion chamber", "piston", "crankshaft", "camshaft", "transmission", "gearbox", "clutch", "drivetrain", "powertrain", "chassis", "suspension", "steering", "brake", "abs", "tire", "fuel injection", "turbocharger", "emission", "hybrid electric vehicle", "electric vehicle", "torque", "diesel", "spark ignition"],
+          "glossary": "glossary/mechanical.automotive.csv"
+        },
+        {
+          "id": "mechanical.aeronautical",
+          "name_vi": "Kỹ thuật hàng không",
+          "name_en": "Aeronautical engineering",
+          "keywords": ["aircraft", "airfoil", "aerodynamic", "aerodynamics", "lift", "drag", "angle of attack", "wing", "fuselage", "turbofan", "jet engine", "propulsion", "mach number", "supersonic", "subsonic", "flight control", "aileron", "elevator", "rudder", "stall", "uav", "drone", "avionics", "thrust", "boundary layer", "wind tunnel", "spacecraft"],
+          "glossary": "glossary/mechanical.aeronautical.csv"
+        },
+        {
+          "id": "mechanical.thermal",
+          "name_vi": "Kỹ thuật nhiệt – lạnh",
+          "name_en": "Thermal and refrigeration engineering",
+          "keywords": ["heat transfer", "thermodynamics", "thermodynamic", "heat exchanger", "refrigeration", "refrigerant", "compressor", "evaporator", "condenser", "hvac", "air conditioning", "heat pump", "boiler", "steam", "enthalpy", "entropy", "convection", "conduction", "radiation", "thermal conductivity", "coefficient of performance", "rankine cycle", "carnot", "turbine", "cooling tower", "psychrometric"],
+          "glossary": "glossary/mechanical.thermal.csv"
+        },
+        {
+          "id": "mechanical.fluid_power",
+          "name_vi": "Máy và tự động thủy khí",
+          "name_en": "Hydraulic and pneumatic machines",
+          "keywords": ["hydraulic", "hydraulics", "pneumatic", "pneumatics", "pump", "centrifugal pump", "valve", "directional control valve", "proportional valve", "servo valve", "cylinder", "accumulator", "fluid power", "pressure relief", "flow rate", "fan", "blower", "water turbine", "hydraulic motor", "compressed air", "cavitation", "fluid mechanics", "pipe flow", "head loss", "impeller"],
+          "glossary": "glossary/mechanical.fluid_power.csv"
+        }
+      ]
+    },
+    {
+      "id": "electrical",
+      "name_vi": "Điện – Điện tử",
+      "name_en": "Electrical and electronic engineering",
+      "subdomains": [
+        {
+          "id": "electrical.power",
+          "name_vi": "Kỹ thuật điện / Hệ thống điện",
+          "name_en": "Electrical power engineering",
+          "keywords": ["power system", "power grid", "transmission line", "distribution network", "transformer", "substation", "generator", "synchronous machine", "induction motor", "load flow", "power flow", "short circuit", "protection relay", "circuit breaker", "busbar", "reactive power", "active power", "power factor", "voltage stability", "frequency control", "renewable energy", "photovoltaic", "wind turbine", "inverter", "smart grid", "harmonics", "three-phase"],
+          "glossary": "glossary/electrical.power.csv"
+        },
+        {
+          "id": "electrical.electronics_telecom",
+          "name_vi": "Điện tử – Viễn thông",
+          "name_en": "Electronics and telecommunications",
+          "keywords": ["amplifier", "transistor", "mosfet", "operational amplifier", "op-amp", "analog circuit", "digital circuit", "oscillator", "filter", "modulation", "demodulation", "antenna", "rf", "wireless", "channel", "bandwidth", "signal-to-noise ratio", "snr", "ofdm", "mimo", "5g", "lte", "fading", "bit error rate", "transceiver", "adc", "dac", "dsp", "fpga", "pcb"],
+          "glossary": "glossary/electrical.electronics_telecom.csv"
+        },
+        {
+          "id": "electrical.control",
+          "name_vi": "Điều khiển – Tự động hóa",
+          "name_en": "Control and automation",
+          "keywords": ["controller", "control system", "pid", "transfer function", "closed-loop", "open-loop", "feedback", "setpoint", "stability", "state space", "observer", "kalman filter", "lqr", "mpc", "model predictive control", "robust control", "adaptive control", "nyquist", "bode", "root locus", "overshoot", "settling time", "steady-state error", "plant", "scada", "automation", "lyapunov"],
+          "glossary": "glossary/electrical.control.csv"
+        },
+        {
+          "id": "electrical.biomedical",
+          "name_vi": "Kỹ thuật y sinh",
+          "name_en": "Biomedical engineering",
+          "keywords": ["biomedical", "medical device", "ecg", "eeg", "emg", "electrocardiogram", "biosignal", "medical imaging", "mri", "ct scan", "ultrasound", "x-ray", "prosthesis", "implant", "biocompatibility", "patient", "clinical", "physiological", "pacemaker", "biosensor", "tissue", "rehabilitation", "hemodynamic", "blood pressure", "pulse oximeter", "diagnosis"],
+          "glossary": "glossary/electrical.biomedical.csv"
+        }
+      ]
+    },
+    {
+      "id": "it",
+      "name_vi": "Công nghệ thông tin & Truyền thông",
+      "name_en": "Information and communication technology",
+      "subdomains": [
+        {
+          "id": "it.computer_science",
+          "name_vi": "Khoa học máy tính",
+          "name_en": "Computer science",
+          "keywords": ["algorithm", "complexity", "data structure", "graph", "tree", "hash table", "sorting", "recursion", "dynamic programming", "compiler", "programming language", "operating system", "kernel", "process", "thread", "scheduling", "concurrency", "deadlock", "virtual memory", "distributed system", "big-o", "np-hard", "automaton", "grammar", "type system", "runtime"],
+          "glossary": "glossary/it.computer_science.csv"
+        },
+        {
+          "id": "it.computer_engineering",
+          "name_vi": "Kỹ thuật máy tính",
+          "name_en": "Computer engineering",
+          "keywords": ["processor", "cpu", "microarchitecture", "pipeline", "instruction set", "isa", "risc", "cache", "cache miss", "branch predictor", "register", "memory hierarchy", "dram", "bus", "interrupt", "embedded system", "firmware", "microcontroller", "soc", "fpga", "verilog", "vhdl", "risc-v", "arm", "multicore", "hazard", "out-of-order"],
+          "glossary": "glossary/it.computer_engineering.csv"
+        },
+        {
+          "id": "it.information_systems",
+          "name_vi": "Hệ thống thông tin",
+          "name_en": "Information systems",
+          "keywords": ["database", "sql", "relational", "query", "transaction", "schema", "erp", "information system", "business process", "data warehouse", "etl", "web service", "api", "rest", "microservice", "cloud", "requirements", "uml", "software engineering", "use case", "user interface", "crm", "nosql", "index", "normalization", "backend"],
+          "glossary": "glossary/it.information_systems.csv"
+        },
+        {
+          "id": "it.data_science_ai",
+          "name_vi": "Khoa học dữ liệu & Trí tuệ nhân tạo",
+          "name_en": "Data science and artificial intelligence",
+          "keywords": ["machine learning", "deep learning", "neural network", "artificial intelligence", "training", "dataset", "classification", "regression", "clustering", "convolutional", "transformer", "attention", "embedding", "gradient descent", "backpropagation", "overfitting", "loss function", "reinforcement learning", "natural language processing", "computer vision", "feature", "accuracy", "precision", "recall", "large language model", "fine-tuning", "inference"],
+          "glossary": "glossary/it.data_science_ai.csv"
+        },
+        {
+          "id": "it.security",
+          "name_vi": "An toàn thông tin",
+          "name_en": "Information security",
+          "keywords": ["security", "cryptography", "encryption", "decryption", "cipher", "aes", "rsa", "public key", "private key", "hash function", "digital signature", "certificate", "authentication", "authorization", "attack", "vulnerability", "exploit", "malware", "firewall", "intrusion detection", "threat", "adversary", "tls", "phishing", "access control", "side channel", "penetration testing"],
+          "glossary": "glossary/it.security.csv"
+        }
+      ]
+    },
+    {
+      "id": "math",
+      "name_vi": "Toán – Tin",
+      "name_en": "Mathematics and informatics",
+      "subdomains": [
+        {
+          "id": "math.applied",
+          "name_vi": "Toán ứng dụng",
+          "name_en": "Applied mathematics",
+          "keywords": ["differential equation", "partial differential equation", "ordinary differential equation", "boundary value problem", "numerical method", "finite difference", "eigenvalue", "eigenvector", "matrix", "linear algebra", "fourier transform", "laplace transform", "integral", "derivative", "convergence", "approximation", "interpolation", "theorem", "lemma", "proof", "vector space", "functional analysis", "kernel", "manifold"],
+          "glossary": "glossary/math.applied.csv"
+        },
+        {
+          "id": "math.informatics",
+          "name_vi": "Toán tin",
+          "name_en": "Mathematics for computing",
+          "keywords": ["discrete mathematics", "combinatorics", "graph theory", "number theory", "boolean algebra", "set theory", "logic", "predicate", "recurrence relation", "generating function", "lattice", "finite field", "modular arithmetic", "computability", "formal language", "proposition", "induction", "permutation", "combination", "bipartite", "spanning tree", "coding theory"],
+          "glossary": "glossary/math.informatics.csv"
+        },
+        {
+          "id": "math.statistics",
+          "name_vi": "Xác suất thống kê",
+          "name_en": "Probability and statistics",
+          "keywords": ["probability", "random variable", "distribution", "normal distribution", "expectation", "variance", "standard deviation", "hypothesis testing", "confidence interval", "p-value", "estimator", "maximum likelihood", "bayesian", "regression", "correlation", "stochastic process", "markov chain", "sample", "population", "statistic", "central limit theorem", "anova", "chi-square", "monte carlo", "time series"],
+          "glossary": "glossary/math.statistics.csv"
+        },
+        {
+          "id": "math.optimization",
+          "name_vi": "Tối ưu",
+          "name_en": "Optimization",
+          "keywords": ["optimization", "objective function", "constraint", "linear programming", "integer programming", "convex", "convexity", "nonlinear programming", "lagrange multiplier", "kkt", "duality", "simplex method", "gradient method", "newton's method", "feasible region", "optimal solution", "heuristic", "metaheuristic", "genetic algorithm", "particle swarm", "branch and bound", "multi-objective", "pareto", "local minimum", "global optimum"],
+          "glossary": "glossary/math.optimization.csv"
+        }
+      ]
+    },
+    {
+      "id": "physics",
+      "name_vi": "Vật lý kỹ thuật",
+      "name_en": "Engineering physics",
+      "subdomains": [
+        {
+          "id": "physics.engineering",
+          "name_vi": "Vật lý kỹ thuật",
+          "name_en": "Engineering physics",
+          "keywords": ["quantum", "semiconductor physics", "band gap", "electron", "photon", "phonon", "crystal lattice", "solid state", "electromagnetic", "maxwell's equations", "wave function", "spectroscopy", "thin film", "magnetic field", "electric field", "superconductor", "plasma", "dielectric", "polarization", "measurement uncertainty", "vacuum", "ultrasonic", "acoustics"],
+          "glossary": "glossary/physics.engineering.csv"
+        },
+        {
+          "id": "physics.nuclear",
+          "name_vi": "Kỹ thuật hạt nhân",
+          "name_en": "Nuclear engineering",
+          "keywords": ["nuclear", "reactor", "neutron", "fission", "fusion", "radiation", "radioactive", "isotope", "decay", "half-life", "dose", "dosimetry", "shielding", "fuel rod", "control rod", "moderator", "coolant", "criticality", "cross section", "gamma ray", "alpha particle", "beta particle", "radiation protection", "nuclear medicine", "detector"],
+          "glossary": "glossary/physics.nuclear.csv"
+        },
+        {
+          "id": "physics.optics_laser",
+          "name_vi": "Quang học / Laser",
+          "name_en": "Optics and lasers",
+          "keywords": ["optics", "optical", "laser", "wavelength", "refractive index", "lens", "mirror", "diffraction", "interference", "polarization", "optical fiber", "waveguide", "photodetector", "photonics", "beam", "spectrum", "coherence", "nonlinear optics", "interferometer", "numerical aperture", "focal length", "laser cavity", "gain medium", "pulse", "spectrometer"],
+          "glossary": "glossary/physics.optics_laser.csv"
+        }
+      ]
+    },
+    {
+      "id": "materials",
+      "name_vi": "Vật liệu",
+      "name_en": "Materials",
+      "subdomains": [
+        {
+          "id": "materials.metallurgy",
+          "name_vi": "Kim loại – Luyện kim",
+          "name_en": "Metallurgy",
+          "keywords": ["metallurgy", "alloy", "steel", "aluminium", "aluminum", "iron", "smelting", "heat treatment", "annealing", "quenching", "tempering", "microstructure", "grain size", "phase diagram", "austenite", "martensite", "ferrite", "pearlite", "hardness", "corrosion", "casting", "solidification", "slag", "furnace", "dislocation", "precipitation hardening"],
+          "glossary": "glossary/materials.metallurgy.csv"
+        },
+        {
+          "id": "materials.polymer_composite",
+          "name_vi": "Vật liệu polymer / composite",
+          "name_en": "Polymers and composites",
+          "keywords": ["polymer", "polymerization", "monomer", "thermoplastic", "thermoset", "elastomer", "composite", "fiber-reinforced", "carbon fiber", "glass fiber", "epoxy", "resin", "matrix", "laminate", "glass transition", "crystallinity", "molecular weight", "curing", "injection molding", "extrusion", "rubber", "polyethylene", "nanocomposite", "interfacial adhesion", "viscoelastic"],
+          "glossary": "glossary/materials.polymer_composite.csv"
+        },
+        {
+          "id": "materials.electronic_nano",
+          "name_vi": "Vật liệu điện tử – nano",
+          "name_en": "Electronic and nano materials",
+          "keywords": ["nanomaterial", "nanoparticle", "nanowire", "nanotube", "graphene", "thin film", "semiconductor", "doping", "silicon", "wafer", "deposition", "sputtering", "chemical vapor deposition", "lithography", "etching", "quantum dot", "perovskite", "xrd", "x-ray diffraction", "sem", "tem", "scanning electron microscope", "characterization", "band gap", "piezoelectric", "ferroelectric"],
+          "glossary": "glossary/materials.electronic_nano.csv"
+        },
+        {
+          "id": "materials.textile",
+          "name_vi": "Dệt – may",
+          "name_en": "Textile and garment",
+          "keywords": ["textile", "fabric", "yarn", "fiber", "weaving", "knitting", "spinning", "garment", "apparel", "sewing", "dyeing", "finishing", "cotton", "polyester", "nonwoven", "warp", "weft", "loom", "pattern making", "seam", "fashion", "denier", "tensile strength", "shrinkage", "printing"],
+          "glossary": "glossary/materials.textile.csv"
+        }
+      ]
+    },
+    {
+      "id": "chem_bio",
+      "name_vi": "Hóa & Khoa học sự sống",
+      "name_en": "Chemistry and life sciences",
+      "subdomains": [
+        {
+          "id": "chem_bio.chemical_engineering",
+          "name_vi": "Kỹ thuật hóa học",
+          "name_en": "Chemical engineering",
+          "keywords": ["chemical engineering", "reactor", "unit operation", "distillation", "absorption", "extraction", "mass transfer", "heat transfer", "reaction kinetics", "catalyst", "catalytic", "process design", "mass balance", "energy balance", "separation", "fluidized bed", "packed column", "crystallization", "drying", "evaporation", "petrochemical", "refinery", "residence time", "yield", "conversion", "selectivity"],
+          "glossary": "glossary/chem_bio.chemical_engineering.csv"
+        },
+        {
+          "id": "chem_bio.chemistry",
+          "name_vi": "Hóa học",
+          "name_en": "Chemistry",
+          "keywords": ["chemistry", "molecule", "atom", "ion", "chemical bond", "covalent", "oxidation", "reduction", "redox", "acid", "base", "ph", "solution", "concentration", "molarity", "titration", "precipitate", "organic", "inorganic", "synthesis", "spectroscopy", "chromatography", "nmr", "functional group", "stoichiometry", "equilibrium", "electrochemistry"],
+          "glossary": "glossary/chem_bio.chemistry.csv"
+        },
+        {
+          "id": "chem_bio.pharmaceutical",
+          "name_vi": "Hóa dược",
+          "name_en": "Pharmaceutical chemistry",
+          "keywords": ["drug", "pharmaceutical", "active pharmaceutical ingredient", "dosage form", "tablet", "capsule", "bioavailability", "pharmacokinetics", "pharmacodynamics", "excipient", "formulation", "dissolution", "clinical trial", "receptor", "ligand", "inhibitor", "toxicity", "medicinal chemistry", "drug delivery", "stability testing", "gmp", "impurity", "hplc", "prodrug", "therapeutic"],
+          "glossary": "glossary/chem_bio.pharmaceutical.csv"
+        },
+        {
+          "id": "chem_bio.biotechnology",
+          "name_vi": "Kỹ thuật sinh học",
+          "name_en": "Biological engineering",
+          "keywords": ["biotechnology", "enzyme", "protein", "dna", "rna", "gene", "genome", "pcr", "cell culture", "microorganism", "bacteria", "fermentation", "bioreactor", "recombinant", "plasmid", "cloning", "expression", "strain", "metabolism", "substrate", "biomass", "sequencing", "crispr", "antibody", "downstream processing", "cell"],
+          "glossary": "glossary/chem_bio.biotechnology.csv"
+        },
+        {
+          "id": "chem_bio.food",
+          "name_vi": "Kỹ thuật thực phẩm",
+          "name_en": "Food engineering",
+          "keywords": ["food", "food processing", "food safety", "shelf life", "pasteurization", "sterilization", "preservation", "nutrition", "protein", "carbohydrate", "lipid", "moisture content", "water activity", "sensory evaluation", "packaging", "haccp", "spoilage", "emulsion", "freezing", "drying", "beverage", "dairy", "additive", "microbial contamination", "texture"],
+          "glossary": "glossary/chem_bio.food.csv"
+        },
+        {
+          "id": "chem_bio.environmental",
+          "name_vi": "Kỹ thuật môi trường",
+          "name_en": "Environmental engineering",
+          "keywords": ["environmental", "wastewater", "water treatment", "sewage", "sludge", "pollution", "pollutant", "air pollution", "emission", "solid waste", "landfill", "recycling", "bod", "cod", "coagulation", "flocculation", "sedimentation", "filtration", "adsorption", "activated carbon", "heavy metal", "environmental impact assessment", "climate change", "greenhouse gas", "biodegradation"],
+          "glossary": "glossary/chem_bio.environmental.csv"
+        }
+      ]
+    },
+    {
+      "id": "economics",
+      "name_vi": "Kinh tế – Quản lý",
+      "name_en": "Economics and management",
+      "subdomains": [
+        {
+          "id": "economics.industrial_management",
+          "name_vi": "Quản lý công nghiệp",
+          "name_en": "Industrial management",
+          "keywords": ["operations management", "production planning", "scheduling", "inventory", "supply chain", "logistics", "lean manufacturing", "six sigma", "quality control", "quality management", "total quality management", "kaizen", "just-in-time", "bottleneck", "throughput", "lead time", "capacity planning", "forecasting", "ergonomics", "work study", "facility layout", "maintenance", "kpi", "iso 9001"],
+          "glossary": "glossary/economics.industrial_management.csv"
+        },
+        {
+          "id": "economics.industrial_economics",
+          "name_vi": "Kinh tế công nghiệp",
+          "name_en": "Industrial economics",
+          "keywords": ["economics", "economic", "market", "demand", "supply", "price elasticity", "cost", "marginal cost", "economies of scale", "competition", "monopoly", "oligopoly", "market structure", "productivity", "gdp", "investment", "industrial policy", "labor", "wage", "input-output", "equilibrium price", "externality", "welfare", "trade"],
+          "glossary": "glossary/economics.industrial_economics.csv"
+        },
+        {
+          "id": "economics.business",
+          "name_vi": "Quản trị kinh doanh",
+          "name_en": "Business administration",
+          "keywords": ["management", "business", "strategy", "marketing", "customer", "brand", "organization", "leadership", "human resource", "stakeholder", "competitive advantage", "swot", "business model", "entrepreneurship", "firm", "employee", "motivation", "decision making", "corporate", "consumer behavior", "market segmentation", "innovation", "project management"],
+          "glossary": "glossary/economics.business.csv"
+        },
+        {
+          "id": "economics.finance_accounting",
+          "name_vi": "Tài chính – Kế toán",
+          "name_en": "Finance and accounting",
+          "keywords": ["finance", "financial", "accounting", "balance sheet", "income statement", "cash flow", "asset", "liability", "equity", "revenue", "expense", "depreciation", "audit", "net present value", "npv", "internal rate of return", "irr", "interest rate", "bond", "stock", "portfolio", "risk", "return", "capital", "dividend", "credit"],
+          "glossary": "glossary/economics.finance_accounting.csv"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+term_en,term_vi,keep_english,notes,source
+discrete mathematics,toán rời rạc,0,,draft
+combinatorics,tổ hợp,0,,draft
+permutation,hoán vị,0,,draft
+combination,tổ hợp,0,,draft
+graph theory,lý thuyết đồ thị,0,,draft
+vertex,đỉnh,0,,draft
+edge,cạnh,0,,draft
+spanning tree,cây khung,0,,draft
+bipartite graph,đồ thị hai phía,0,,draft
+shortest path,đường đi ngắn nhất,0,,draft
+number theory,lý thuyết số,0,,draft
+modular arithmetic,số học đồng dư,0,,draft
+prime number,số nguyên tố,0,,draft
+greatest common divisor,ước chung lớn nhất,0,,draft
+boolean algebra,đại số Boole,0,,draft
+set theory,lý thuyết tập hợp,0,,draft
+logic,logic,1,,draft
+predicate,vị từ,0,,draft
+proposition,mệnh đề,0,,draft
+mathematical induction,quy nạp toán học,0,,draft
+recurrence relation,hệ thức truy hồi,0,,draft
+generating function,hàm sinh,0,,draft
+lattice,dàn,0,,draft
+finite field,trường hữu hạn,0,,draft
+computability,tính khả tính,0,,draft
+formal language,ngôn ngữ hình thức,0,,draft
+coding theory,lý thuyết mã,0,,draft
+relation,quan hệ,0,,draft
+bijection,song ánh,0,,draft
+injection,đơn ánh,0,,draft
+surjection,toàn ánh,0,,draft

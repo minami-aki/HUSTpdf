@@ -1,0 +1,31 @@
+term_en,term_vi,keep_english,notes,source
+biomedical engineering,kỹ thuật y sinh,0,,draft
+medical device,thiết bị y tế,0,,draft
+electrocardiogram,điện tâm đồ,0,ECG,draft
+electroencephalogram,điện não đồ,0,EEG,draft
+electromyogram,điện cơ đồ,0,EMG,draft
+biosignal,tín hiệu y sinh,0,,draft
+medical imaging,chẩn đoán hình ảnh,0,,draft
+magnetic resonance imaging,chụp cộng hưởng từ,0,MRI,draft
+computed tomography,chụp cắt lớp vi tính,0,CT,draft
+ultrasound,siêu âm,0,,draft
+X-ray,tia X,0,,draft
+prosthesis,chi giả,0,bộ phận giả,draft
+implant,vật cấy ghép,0,,draft
+biocompatibility,tính tương thích sinh học,0,,draft
+biosensor,cảm biến sinh học,0,,draft
+pacemaker,máy tạo nhịp tim,0,,draft
+blood pressure,huyết áp,0,,draft
+heart rate,nhịp tim,0,,draft
+pulse oximeter,máy đo nồng độ oxy trong máu,0,SpO2,draft
+patient monitor,máy theo dõi bệnh nhân,0,,draft
+tissue,mô,0,mô sinh học,draft
+cell,tế bào,0,,draft
+rehabilitation,phục hồi chức năng,0,,draft
+diagnosis,chẩn đoán,0,,draft
+physiological,sinh lý,0,,draft
+electrode,điện cực,0,,draft
+artifact,nhiễu giả,0,tạp nhiễu tín hiệu,draft
+dialysis,lọc máu,0,,draft
+ventilator,máy thở,0,,draft
+clinical trial,thử nghiệm lâm sàng,0,,draft

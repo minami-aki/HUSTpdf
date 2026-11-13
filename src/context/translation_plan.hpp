@@ -14,7 +14,11 @@
 #include <optional>
 #include <string>
 
+#include <vector>
+
+#include "terminology/glossary.hpp"
 #include "text/page_text.hpp"
+#include "text/protect.hpp"
 #include "translate/translator.hpp"
 
 namespace pdfread::context {
@@ -29,15 +33,28 @@ struct PlanOptions {
     std::size_t max_context_chars = 600;  // ~150 token
     std::size_t max_chars = 2000;         // độ dài tối đa của đoạn cần dịch
     std::size_t max_term_words = 4;
+    bool protect = true;                  // thay công thức/mã/đơn vị bằng placeholder
+    const terminology::GlossaryIndex* glossary = nullptr;
+    std::vector<translate::DomainScore> domains;
+};
+
+// Kết quả tra glossary cho vùng chọn là một từ/cụm ngắn (không cần gọi mô hình).
+struct GlossaryAnswer {
+    terminology::GlossaryEntry entry;
+    std::vector<terminology::GlossaryEntry> alternatives;  // nghĩa khác ở lĩnh vực khác
 };
 
 struct TranslationPlan {
     SelectionKind kind = SelectionKind::Sentences;
-    translate::TranslateRequest request;
+    translate::TranslateRequest request;  // request.text đã thay placeholder
     text::Span selected;    // phần người dùng bôi đen (chỉ số ký tự trong PageText)
     text::Span translated;  // phần thực sự đem dịch (>= selected khi đã mở rộng)
     bool expanded = false;  // translated rộng hơn selected
     bool truncated = false; // cắt bớt do quá max_chars
+    std::string source;     // text gốc đem dịch (chưa thay placeholder)
+    std::vector<text::Placeholder> placeholders;
+    std::vector<terminology::GlossaryEntry> terms;  // thuật ngữ đưa vào prompt (để hậu kiểm)
+    std::optional<GlossaryAnswer> glossary_answer;  // chỉ với SelectionKind::Term
 };
 
 // Phân loại vùng chọn.

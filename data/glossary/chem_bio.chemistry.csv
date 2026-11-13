@@ -1,0 +1,32 @@
+term_en,term_vi,keep_english,notes,source
+molecule,phân tử,0,,draft
+atom,nguyên tử,0,,draft
+ion,ion,1,,draft
+chemical bond,liên kết hóa học,0,,draft
+covalent bond,liên kết cộng hóa trị,0,,draft
+oxidation,sự oxi hóa,0,,draft
+reduction,sự khử,0,,draft
+redox reaction,phản ứng oxi hóa - khử,0,,draft
+acid,axit,0,,draft
+base,bazơ,0,,draft
+pH,pH,1,,draft
+solution,dung dịch,0,,draft
+solvent,dung môi,0,,draft
+solute,chất tan,0,,draft
+concentration,nồng độ,0,,draft
+molarity,nồng độ mol,0,,draft
+titration,chuẩn độ,0,,draft
+precipitate,kết tủa,0,,draft
+organic compound,hợp chất hữu cơ,0,,draft
+inorganic compound,hợp chất vô cơ,0,,draft
+functional group,nhóm chức,0,,draft
+synthesis,tổng hợp,0,,draft
+stoichiometry,hóa học lượng pháp,0,tỷ lượng,draft
+chemical equilibrium,cân bằng hóa học,0,,draft
+electrochemistry,điện hóa học,0,,draft
+electrolyte,chất điện ly,0,,draft
+chromatography,sắc ký,0,,draft
+spectroscopy,quang phổ,0,,draft
+nuclear magnetic resonance,cộng hưởng từ hạt nhân,0,NMR,draft
+yield,hiệu suất,0,hiệu suất phản ứng,draft
+reagent,thuốc thử,0,,draft

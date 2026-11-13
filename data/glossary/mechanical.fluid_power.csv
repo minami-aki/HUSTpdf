@@ -1,0 +1,31 @@
+term_en,term_vi,keep_english,notes,source
+hydraulics,thủy lực,0,,draft
+hydraulic system,hệ thống thủy lực,0,,draft
+pneumatics,khí nén,0,,draft
+pneumatic system,hệ thống khí nén,0,,draft
+pump,bơm,0,,draft
+centrifugal pump,bơm ly tâm,0,,draft
+gear pump,bơm bánh răng,0,,draft
+piston pump,bơm piston,0,,draft
+impeller,bánh công tác,0,,draft
+valve,van,0,,draft
+directional control valve,van phân phối,0,,draft
+pressure relief valve,van an toàn,0,van xả áp,draft
+proportional valve,van tỷ lệ,0,,draft
+servo valve,van servo,0,van trợ động,draft
+check valve,van một chiều,0,,draft
+hydraulic cylinder,xi lanh thủy lực,0,,draft
+hydraulic motor,động cơ thủy lực,0,,draft
+accumulator,bình tích áp,0,,draft
+flow rate,lưu lượng,0,,draft
+pressure drop,tổn thất áp suất,0,,draft
+head loss,tổn thất cột áp,0,,draft
+head,cột áp,0,,draft
+cavitation,xâm thực,0,hiện tượng khí thực,draft
+viscosity,độ nhớt,0,,draft
+fluid mechanics,cơ học chất lỏng,0,,draft
+compressed air,khí nén,0,,draft
+fan,quạt,0,,draft
+blower,máy thổi khí,0,,draft
+water turbine,tua bin nước,0,,draft
+efficiency,hiệu suất,0,,draft

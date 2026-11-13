@@ -4,6 +4,7 @@ find_package(glfw3 CONFIG REQUIRED)
 find_package(imgui CONFIG REQUIRED)
 find_package(nfd CONFIG REQUIRED)
 find_package(unofficial-libmupdf CONFIG REQUIRED)
+find_package(nlohmann_json CONFIG REQUIRED)
 
 # --- util -------------------------------------------------------------------
 add_library(pdfread_util STATIC
@@ -21,6 +22,7 @@ target_link_libraries(pdfread_util
 add_library(pdfread_text STATIC
     text/normalize.cpp
     text/page_text.cpp
+    text/protect.cpp
     text/reading_order.cpp
     text/sentence_splitter.cpp
 )
@@ -28,6 +30,22 @@ target_link_libraries(pdfread_text
     PUBLIC pdfread_util
     PRIVATE pdfread_options
 )
+
+# --- terminology: tầng 1 — lĩnh vực, glossary, trích thuật ngữ ------------------
+add_library(pdfread_terminology STATIC
+    terminology/classifier.cpp
+    terminology/domains.cpp
+    terminology/glossary.cpp
+    terminology/glossary_store.cpp
+    terminology/term_extractor.cpp
+    terminology/words.cpp
+)
+target_link_libraries(pdfread_terminology
+    PUBLIC pdfread_text
+    PRIVATE pdfread_options nlohmann_json::nlohmann_json
+)
+# DomainScore nằm trong translate/translator.hpp (chỉ header).
+target_include_directories(pdfread_terminology PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 # --- pdf: lớp bọc MuPDF -----------------------------------------------------
 add_library(pdfread_pdf STATIC
@@ -58,13 +76,14 @@ add_library(pdfread_context STATIC
     context/translation_plan.cpp
 )
 target_link_libraries(pdfread_context
-    PUBLIC pdfread_text pdfread_translate
+    PUBLIC pdfread_text pdfread_translate pdfread_terminology
     PRIVATE pdfread_options
 )
 
 # --- ui: viewer, layout, texture cache, font, popup dịch --------------------
 add_library(pdfread_ui STATIC
     ui/fonts.cpp
+    ui/glossary_window.cpp
     ui/page_layout.cpp
     ui/selection.cpp
     ui/texture_cache.cpp
@@ -72,7 +91,7 @@ add_library(pdfread_ui STATIC
     ui/viewer.cpp
 )
 target_link_libraries(pdfread_ui
-    PUBLIC pdfread_pdf pdfread_translate pdfread_context imgui::imgui glfw OpenGL::GL
+    PUBLIC pdfread_pdf pdfread_translate pdfread_context imgui::imgui glfw OpenGL::GL nfd::nfd
     PRIVATE pdfread_options
 )
 
@@ -100,9 +119,9 @@ if(WIN32)
     endif()
 endif()
 
-# Chép font (và dữ liệu khác) cạnh file chạy.
+# Chép data/ (font, domains.json, glossary) cạnh file chạy.
 add_custom_command(TARGET pdfread POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
-            "${PROJECT_SOURCE_DIR}/data/fonts" "$<TARGET_FILE_DIR:pdfread>/data/fonts"
+            "${PROJECT_SOURCE_DIR}/data" "$<TARGET_FILE_DIR:pdfread>/data"
     VERBATIM
 )

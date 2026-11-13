@@ -1,0 +1,32 @@
+term_en,term_vi,keep_english,notes,source
+differential equation,phương trình vi phân,0,,draft
+ordinary differential equation,phương trình vi phân thường,0,,draft
+partial differential equation,phương trình đạo hàm riêng,0,,draft
+boundary value problem,bài toán biên,0,,draft
+initial value problem,bài toán giá trị ban đầu,0,bài toán Cauchy,draft
+numerical method,phương pháp số,0,,draft
+finite difference,sai phân hữu hạn,0,,draft
+eigenvalue,giá trị riêng,0,trị riêng,draft
+eigenvector,vectơ riêng,0,,draft
+matrix,ma trận,0,,draft
+determinant,định thức,0,,draft
+linear algebra,đại số tuyến tính,0,,draft
+vector space,không gian vectơ,0,,draft
+kernel,hạt nhân,0,"hạt nhân (của ánh xạ, của tích phân)",draft
+Fourier transform,biến đổi Fourier,0,,draft
+Laplace transform,biến đổi Laplace,0,,draft
+integral,tích phân,0,,draft
+derivative,đạo hàm,0,,draft
+gradient,gradient,1,vectơ građien,draft
+convergence,sự hội tụ,0,,draft
+approximation,xấp xỉ,0,,draft
+interpolation,nội suy,0,,draft
+theorem,định lý,0,,draft
+lemma,bổ đề,0,,draft
+corollary,hệ quả,0,,draft
+proof,chứng minh,0,,draft
+manifold,đa tạp,0,,draft
+norm,chuẩn,0,chuẩn của vectơ,draft
+inner product,tích vô hướng,0,,draft
+functional analysis,giải tích hàm,0,,draft
+well-posed,đặt chỉnh,0,,draft

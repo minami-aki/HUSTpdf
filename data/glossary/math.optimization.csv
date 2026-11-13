@@ -1,0 +1,31 @@
+term_en,term_vi,keep_english,notes,source
+optimization,tối ưu hóa,0,,draft
+objective function,hàm mục tiêu,0,,draft
+constraint,ràng buộc,0,,draft
+decision variable,biến quyết định,0,,draft
+feasible region,miền chấp nhận được,0,,draft
+feasible solution,phương án chấp nhận được,0,,draft
+optimal solution,nghiệm tối ưu,0,phương án tối ưu,draft
+linear programming,quy hoạch tuyến tính,0,,draft
+integer programming,quy hoạch nguyên,0,,draft
+nonlinear programming,quy hoạch phi tuyến,0,,draft
+convex optimization,tối ưu lồi,0,,draft
+convex function,hàm lồi,0,,draft
+convex set,tập lồi,0,,draft
+Lagrange multiplier,nhân tử Lagrange,0,,draft
+duality,đối ngẫu,0,,draft
+KKT conditions,điều kiện KKT,0,,draft
+simplex method,phương pháp đơn hình,0,,draft
+gradient method,phương pháp gradient,0,,draft
+Newton's method,phương pháp Newton,0,,draft
+local minimum,cực tiểu địa phương,0,,draft
+global optimum,tối ưu toàn cục,0,,draft
+heuristic,heuristic,1,thuật toán kinh nghiệm,draft
+metaheuristic,metaheuristic,1,,draft
+genetic algorithm,thuật toán di truyền,0,,draft
+particle swarm optimization,tối ưu bầy đàn,0,PSO,draft
+branch and bound,nhánh cận,0,,draft
+multi-objective optimization,tối ưu đa mục tiêu,0,,draft
+Pareto front,biên Pareto,0,,draft
+penalty function,hàm phạt,0,,draft
+relaxation,nới lỏng,0,,draft

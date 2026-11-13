@@ -1,0 +1,32 @@
+term_en,term_vi,keep_english,notes,source
+probability,xác suất,0,,draft
+random variable,biến ngẫu nhiên,0,,draft
+probability distribution,phân phối xác suất,0,,draft
+normal distribution,phân phối chuẩn,0,,draft
+probability density function,hàm mật độ xác suất,0,,draft
+cumulative distribution function,hàm phân phối tích lũy,0,,draft
+expectation,kỳ vọng,0,,draft
+variance,phương sai,0,,draft
+standard deviation,độ lệch chuẩn,0,,draft
+covariance,hiệp phương sai,0,,draft
+correlation,tương quan,0,,draft
+sample,mẫu,0,,draft
+population,tổng thể,0,,draft
+estimator,ước lượng,0,hàm ước lượng,draft
+maximum likelihood estimation,ước lượng hợp lý cực đại,0,MLE,draft
+hypothesis testing,kiểm định giả thuyết,0,,draft
+null hypothesis,giả thuyết không,0,,draft
+confidence interval,khoảng tin cậy,0,,draft
+p-value,giá trị p,0,,draft
+significance level,mức ý nghĩa,0,,draft
+regression analysis,phân tích hồi quy,0,,draft
+Bayesian inference,suy luận Bayes,0,,draft
+prior,phân phối tiên nghiệm,0,,draft
+posterior,phân phối hậu nghiệm,0,,draft
+stochastic process,quá trình ngẫu nhiên,0,,draft
+Markov chain,xích Markov,0,,draft
+central limit theorem,định lý giới hạn trung tâm,0,,draft
+time series,chuỗi thời gian,0,,draft
+Monte Carlo simulation,mô phỏng Monte Carlo,0,,draft
+outlier,giá trị ngoại lai,0,,draft
+bias,độ chệch,0,,draft

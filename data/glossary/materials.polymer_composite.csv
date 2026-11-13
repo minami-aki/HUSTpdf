@@ -1,0 +1,31 @@
+term_en,term_vi,keep_english,notes,source
+polymer,polyme,0,,draft
+polymerization,trùng hợp,0,phản ứng polyme hóa,draft
+monomer,monome,0,,draft
+thermoplastic,nhựa nhiệt dẻo,0,,draft
+thermoset,nhựa nhiệt rắn,0,,draft
+elastomer,chất đàn hồi,0,elastome,draft
+rubber,cao su,0,,draft
+composite,vật liệu composite,0,,draft
+fiber-reinforced polymer,polyme gia cường sợi,0,,draft
+carbon fiber,sợi các bon,0,,draft
+glass fiber,sợi thủy tinh,0,,draft
+matrix,nền,0,pha nền của composite,draft
+reinforcement,cốt,0,pha gia cường,draft
+epoxy,epoxy,1,,draft
+resin,nhựa,0,nhựa nền,draft
+laminate,tấm nhiều lớp,0,,draft
+ply,lớp,0,,draft
+glass transition temperature,nhiệt độ hóa thủy tinh,0,Tg,draft
+crystallinity,độ kết tinh,0,,draft
+molecular weight,khối lượng phân tử,0,,draft
+curing,đóng rắn,0,,draft
+injection molding,ép phun,0,,draft
+extrusion,đùn,0,,draft
+polyethylene,polyetylen,0,,draft
+polypropylene,polypropylen,0,,draft
+nanocomposite,nanocomposite,1,,draft
+interfacial adhesion,bám dính bề mặt phân cách,0,,draft
+viscoelasticity,tính nhớt đàn hồi,0,,draft
+delamination,tách lớp,0,,draft
+filler,chất độn,0,,draft

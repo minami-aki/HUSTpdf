@@ -1,0 +1,33 @@
+term_en,term_vi,keep_english,notes,source
+amplifier,bộ khuếch đại,0,,draft
+operational amplifier,bộ khuếch đại thuật toán,0,op-amp,draft
+transistor,tranzito,0,transistor,draft
+MOSFET,MOSFET,1,,draft
+diode,điốt,0,,draft
+oscillator,bộ dao động,0,,draft
+filter,bộ lọc,0,,draft
+low-pass filter,bộ lọc thông thấp,0,,draft
+high-pass filter,bộ lọc thông cao,0,,draft
+gain,hệ số khuếch đại,0,,draft
+bandwidth,băng thông,0,,draft
+modulation,điều chế,0,,draft
+demodulation,giải điều chế,0,,draft
+carrier,sóng mang,0,,draft
+antenna,anten,0,,draft
+channel,kênh,0,kênh truyền,draft
+fading,pha-đinh,0,,draft
+noise,nhiễu,0,,draft
+signal-to-noise ratio,tỷ số tín hiệu trên nhiễu,0,SNR,draft
+bit error rate,tỷ lệ lỗi bit,0,BER,draft
+transceiver,bộ thu phát,0,,draft
+receiver,máy thu,0,,draft
+transmitter,máy phát,0,,draft
+OFDM,OFDM,1,ghép kênh phân chia theo tần số trực giao,draft
+MIMO,MIMO,1,nhiều đầu vào nhiều đầu ra,draft
+sampling,lấy mẫu,0,,draft
+ADC,ADC,1,bộ chuyển đổi tương tự - số,draft
+DAC,DAC,1,bộ chuyển đổi số - tương tự,draft
+digital signal processing,xử lý tín hiệu số,0,,draft
+printed circuit board,mạch in,0,PCB,draft
+impedance,trở kháng,0,,draft
+resolution,độ phân giải,0,,draft

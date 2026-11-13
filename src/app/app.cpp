@@ -17,9 +17,13 @@
 
 #include "context/translation_plan.hpp"
 #include "pdf/context.hpp"
+#include "pdf/text_page.hpp"
+#include "terminology/classifier.hpp"
 #include "translate/llama_translator.hpp"
 #include "ui/fonts.hpp"
 #include "util/log.hpp"
+#include "util/paths.hpp"
+#include "util/timer.hpp"
 #include "util/utf8.hpp"
 
 namespace pdfread::app {
@@ -28,6 +32,14 @@ namespace {
 constexpr double kSnapshotTimeoutSeconds = 60.0;
 constexpr double kTranslateDebounceSeconds = 0.25;  // chờ sau khi thả chuột rồi mới dịch
 constexpr std::size_t kMaxTranslateChars = 2000;    // giới hạn độ dài đoạn gửi đi dịch
+constexpr int kClassifyPages = 3;                    // số trang đầu dùng để phân loại lĩnh vực
+constexpr int kExtractMaxPages = 300;                // trích thuật ngữ tối đa bấy nhiêu trang
+
+std::string trim_copy(std::string s) {
+    const auto b = s.find_first_not_of(" \t\n");
+    if (b == std::string::npos) return {};
+    return s.substr(b, s.find_last_not_of(" \t\n") - b + 1);
+}
 
 App* app_from(GLFWwindow* window) { return static_cast<App*>(glfwGetWindowUserPointer(window)); }
 
@@ -53,6 +65,7 @@ App::App(GLFWwindow* window, const pdf::RootContext& root, AppOptions options)
     glfwSetDropCallback(window_, &App::on_drop);
     glfwSetWindowRefreshCallback(window_, &App::on_refresh);
     glfwSetWindowContentScaleCallback(window_, &App::on_content_scale);
+    glfwSetWindowFocusCallback(window_, &App::on_focus);
 
     float xs = 1.0f;
     float ys = 1.0f;
@@ -60,6 +73,20 @@ App::App(GLFWwindow* window, const pdf::RootContext& root, AppOptions options)
     ui_scale_ = std::max(1.0f, xs);
     ui::apply_style(ui_scale_);
 
+    // Tầng 1: bảng lĩnh vực + glossary (lĩnh vực, người dùng, tài liệu).
+    try {
+        ScopedTimer t("load glossaries");
+        catalog_ = std::make_shared<const terminology::DomainCatalog>(
+            terminology::DomainCatalog::load(options_.data_dir / "domains.json"));
+        glossary_ = std::make_unique<terminology::GlossaryStore>(*catalog_, app_data_dir() / "glossary" / "user.csv");
+        log::info("Đã nạp {} lĩnh vực, {} mục glossary", catalog_->subdomains().size(), glossary_->index()->size());
+        for (const std::string& e : glossary_->errors()) log::warn("{}", e);
+    } catch (const std::exception& e) {
+        log::warn("Không dùng được lĩnh vực/glossary: {}", e.what());
+        set_status(std::format("Không nạp được lĩnh vực/glossary: {}", e.what()), true);
+    }
+
+    glossary_window_.open = options_.open_glossary;
     if (options_.fit_page) viewer_.set_zoom_mode(ui::ZoomMode::FitPage);
     if (options_.zoom) viewer_.set_zoom(*options_.zoom);
     if (!options_.open_path.empty()) open_file(options_.open_path);
@@ -80,6 +107,8 @@ App::~App() {
     glfwSetDropCallback(window_, nullptr);
     glfwSetWindowRefreshCallback(window_, nullptr);
     glfwSetWindowContentScaleCallback(window_, nullptr);
+    glfwSetWindowFocusCallback(window_, nullptr);
+    current_ticket_ = 0;  // dừng trích thuật ngữ đang chạy
     loader_.shutdown();
     viewer_.set_document(nullptr);
 }
@@ -172,6 +201,7 @@ bool App::draw_ui() {
 
     update_translation();
     draw_translation_popup();
+    if (glossary_) glossary_window_.draw(*glossary_, extracted_terms_, extracting_, ui_scale_);
     return busy;
 }
 
@@ -186,6 +216,16 @@ void App::update_translation() {
             case Kind::ModelFailed:
                 model_status_ = "lỗi";
                 set_status(std::format("Không nạp được mô hình dịch: {}", e.text), true);
+                break;
+            case Kind::Token:
+                // Khôi phục placeholder ngay khi stream (giữ lại "⟦F…" chưa trọn).
+                if (active_.stream && e.request_id == active_.id) {
+                    active_.raw += e.text;
+                    popup_.append_text(active_.stream->push(e.text));
+                }
+                break;
+            case Kind::Done:
+                if (active_.stream && e.request_id == active_.id) finish_translation();
                 break;
             default: break;
         }
@@ -215,9 +255,27 @@ void App::update_translation() {
     }
 }
 
-void App::request_translation() {
+void App::finish_translation() {
+    popup_.append_text(active_.stream->flush());
+    active_.stream.reset();
+    // Bản cuối: khôi phục trên toàn bộ bản dịch thô và hậu kiểm.
+    const text::RestoreResult r = text::restore_placeholders(active_.raw, active_.placeholders);
+    std::vector<std::string> issues;
+    for (const auto& m : r.missing) issues.push_back(std::format("Bản dịch làm mất: {}", m));
+    for (const auto& d : r.duplicated) issues.push_back(std::format("Bản dịch lặp lại: {}", d));
+    for (const auto& u : r.unknown) issues.push_back(std::format("Ký hiệu lạ trong bản dịch: {}", u));
+    for (const auto& t : terminology::check_terms(r.text, active_.terms)) {
+        issues.push_back(std::format("Chưa dùng đúng thuật ngữ: {} → {}", t.term_en, t.target()));
+    }
+    popup_.set_text(trim_copy(r.text));
+    if (!issues.empty()) log::info("Hậu kiểm: {} vấn đề", issues.size());
+    popup_.set_issues(std::move(issues));
+}
+
+void App::request_translation(bool force_model) {
     if (!viewer_.has_selection()) return;
     viewer_.clear_translated_highlight();
+    active_ = ActiveTranslation{};
 
     // Vùng chọn trong một trang: dùng text đã làm sạch/tách câu của trang (tầng 2) để
     // lập kế hoạch dịch (mở rộng ra trọn câu, ngữ cảnh…).
@@ -234,22 +292,47 @@ void App::request_translation() {
             }
             return false;
         });
+        const std::shared_ptr<const terminology::GlossaryIndex> index = glossary_ ? glossary_->index() : nullptr;
         context::PlanOptions options;
         options.expand_to_sentence = whole_sentence_;
         options.include_context = options_.include_context;
         options.max_chars = kMaxTranslateChars;
+        options.glossary = index.get();
+        options.domains = effective_domains();
         if (auto plan = context::make_plan(page, span, options)) {
+            // Từ / cụm ngắn có trong glossary: trả lời ngay, không gọi mô hình.
+            if (plan->glossary_answer && !force_model) {
+                translation_.cancel();
+                const auto& a = *plan->glossary_answer;
+                ui::TranslationPopup::GlossaryAnswer ans;
+                ans.term_en = a.entry.term_en;
+                ans.term_vi = a.entry.target();
+                ans.domain = a.entry.domain_id.empty()
+                                 ? (a.entry.layer == terminology::Layer::User ? "Glossary của tôi" : "Glossary của tài liệu")
+                                 : domain_name(a.entry.domain_id);
+                if (a.entry.source == "draft") ans.domain += " · bản nháp";
+                ans.notes = a.entry.notes;
+                for (const auto& alt : a.alternatives) ans.alternatives.emplace_back(alt.target(), domain_name(alt.domain_id));
+                log::debug("Tra glossary: {} -> {}", ans.term_en, ans.term_vi);
+                popup_.show_glossary(std::move(ans));
+                return;
+            }
             if (plan->expanded) viewer_.set_translated_highlight(sel->page, page.line_rects(plan->translated));
             using Scope = ui::TranslationPopup::Scope;
             const Scope scope = plan->kind != context::SelectionKind::Partial ? Scope::None
                                 : whole_sentence_                               ? Scope::WholeSentence
                                                                                 : Scope::SelectionOnly;
-            log::debug("Dịch ({}): \"{}\"{}", plan->expanded ? "mở rộng ra trọn câu" : "đúng vùng chọn",
-                       plan->request.text,
+            log::debug("Dịch ({}): \"{}\"{}{}", plan->expanded ? "mở rộng ra trọn câu" : "đúng vùng chọn",
+                       plan->request.text, plan->terms.empty() ? "" : std::format(" | {} thuật ngữ", plan->terms.size()),
                        plan->request.context.empty() ? std::string() : " | ngữ cảnh: " + plan->request.context);
+            std::vector<ui::TranslationPopup::TermHint> hints;
+            for (const auto& t : plan->terms) hints.push_back({t.term_en, t.target()});
             const bool truncated = plan->truncated;
-            const std::uint64_t id = translation_.submit(std::move(plan->request));
-            popup_.show(id, truncated, scope);
+            active_.placeholders = plan->placeholders;
+            active_.terms = plan->terms;
+            active_.stream = std::make_unique<text::PlaceholderStream>(plan->placeholders);
+            active_.id = translation_.submit(std::move(plan->request));
+            popup_.show(active_.id, truncated, scope, std::move(hints));
             return;
         }
     }
@@ -262,8 +345,10 @@ void App::request_translation() {
 
     translate::TranslateRequest request;
     request.text = std::move(text);
-    const std::uint64_t id = translation_.submit(std::move(request));
-    popup_.show(id, truncated);
+    request.domains = effective_domains();
+    active_.stream = std::make_unique<text::PlaceholderStream>(std::vector<text::Placeholder>{});
+    active_.id = translation_.submit(std::move(request));
+    popup_.show(active_.id, truncated);
 }
 
 void App::draw_translation_popup() {
@@ -284,8 +369,89 @@ void App::draw_translation_popup() {
             whole_sentence_ = false;
             request_translation();
             break;
+        case Action::TranslateWithModel: request_translation(true); break;
+        case Action::EditTerm:
+            if (glossary_) glossary_window_.edit(*glossary_, popup_.glossary_term());
+            break;
         case Action::None: break;
     }
+}
+
+// --- lĩnh vực / glossary ----------------------------------------------------------
+
+std::vector<translate::DomainScore> App::effective_domains() const {
+    if (!domain_override_.empty()) return {{domain_override_, 1.0f}};
+    return auto_domains_;
+}
+
+void App::apply_domains() {
+    if (glossary_) glossary_->set_domains(effective_domains());
+}
+
+std::string App::domain_name(const std::string& id) const {
+    if (!catalog_) return id;
+    const auto* d = catalog_->find(id);
+    return d != nullptr ? d->name_vi : id;
+}
+
+void App::draw_domain_combo() {
+    const auto domains = effective_domains();
+    std::string preview = domains.empty() ? std::string("Lĩnh vực: chưa rõ") : "Lĩnh vực: " + domain_name(domains.front().domain_id);
+    if (domain_override_.empty() && domains.size() > 1) preview += std::format(" (+{})", domains.size() - 1);
+    ImGui::SetNextItemWidth(std::min(ImGui::CalcTextSize(preview.c_str()).x + ImGui::GetStyle().FramePadding.x * 2 +
+                                         ImGui::GetFrameHeight(),
+                                     380.0f * ui_scale_));
+    if (ImGui::BeginCombo("##domain", preview.c_str(), ImGuiComboFlags_HeightLargest)) {
+        std::string auto_label = "Tự động";
+        if (auto_domains_.empty()) {
+            auto_label += " (chưa xác định được)";
+        } else {
+            auto_label += ":";
+            for (const auto& d : auto_domains_) auto_label += std::format(" {} {:.0f}%,", domain_name(d.domain_id), d.score * 100);
+            auto_label.pop_back();
+        }
+        if (ImGui::Selectable(auto_label.c_str(), domain_override_.empty())) {
+            domain_override_.clear();
+            apply_domains();
+        }
+        for (const auto& g : catalog_->groups()) {
+            ImGui::SeparatorText(g.name_vi.c_str());
+            for (std::size_t i : g.subdomains) {
+                const auto& s = catalog_->subdomains()[i];
+                ImGui::PushID(s.id.c_str());
+                if (ImGui::Selectable(s.name_vi.c_str(), domain_override_ == s.id)) {
+                    domain_override_ = s.id;
+                    apply_domains();
+                }
+                ImGui::PopID();
+            }
+        }
+        ImGui::EndCombo();
+    }
+    ImGui::SetItemTooltip("Lĩnh vực của tài liệu: chọn nghĩa chuyên ngành và glossary khi dịch");
+}
+
+void App::start_term_extraction(const std::shared_ptr<pdf::Document>& doc, std::uint64_t ticket) {
+    extracting_ = true;
+    extracted_terms_.clear();
+    loader_.post([this, doc, ticket] {
+        ScopedTimer t("extract terms");
+        std::vector<std::u32string> sentences;
+        const int pages = std::min(doc->page_count(), kExtractMaxPages);
+        for (int i = 0; i < pages; ++i) {
+            if (current_ticket_.load() != ticket) return;  // đã mở tài liệu khác
+            try {
+                // Không đưa display list vào cache: tránh đẩy các trang đang xem ra khỏi cache.
+                const auto tp = pdf::TextPage::build(*doc->display_list_uncached(i), doc->page(i));
+                const auto& pt = tp->page_text();
+                for (const auto& s : pt.sentences()) sentences.emplace_back(pt.text().substr(s.span.begin, s.span.size()));
+            } catch (const std::exception& e) {
+                log::debug("Trích thuật ngữ: bỏ qua trang {}: {}", i + 1, e.what());
+            }
+        }
+        extract_results_.push({ticket, terminology::extract_terms(sentences)});
+        glfwPostEmptyEvent();
+    });
 }
 
 void App::choose_model_dialog() {
@@ -415,6 +581,13 @@ void App::draw_toolbar() {
     ImGui::SameLine();
     if (ImGui::Button("Mô hình…")) choose_model_dialog();
     ImGui::SetItemTooltip("Chọn file mô hình dịch (GGUF)");
+    if (glossary_) {
+        ImGui::SameLine(0, 18.0f * ui_scale_);
+        draw_domain_combo();
+        ImGui::SameLine();
+        if (ImGui::Button("Glossary…")) glossary_window_.open = !glossary_window_.open;
+        ImGui::SetItemTooltip("Xem, sửa, nhập/xuất glossary (Ctrl+G)");
+    }
     ImGui::EndChild();
     ImGui::PopStyleVar(2);
 }
@@ -450,6 +623,7 @@ void App::handle_shortcuts() {
     const ImGuiIO& io = ImGui::GetIO();
     if (io.WantTextInput) return;
     if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_O)) open_dialog();
+    if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_G) && glossary_) glossary_window_.open = !glossary_window_.open;
     if (!viewer_.document()) return;
     if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_T)) request_translation();
     if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_C) && viewer_.has_selection()) {
@@ -483,15 +657,39 @@ void App::open_dialog() {
 
 void App::open_file(const std::filesystem::path& path) {
     const std::uint64_t ticket = ++open_ticket_;
+    current_ticket_ = ticket;
     loading_ = true;
     loading_path_ = path;
     set_status(std::format("Đang mở {}…", file_name_utf8(path)), false);
-    loader_.post([this, path, ticket] {
-        OpenResult r{.ticket = ticket, .path = path, .doc = nullptr, .error = {}};
+    loader_.post([this, path, ticket, catalog = catalog_] {
+        OpenResult r{.ticket = ticket, .path = path, .doc = nullptr, .domains = {}, .error = {}};
         try {
             r.doc = pdf::Document::open(path);
         } catch (const std::exception& e) {
             r.error = e.what();
+        }
+        // Tầng 1: phân loại lĩnh vực theo mục lục và vài trang đầu (tiêu đề/tóm tắt nặng hơn).
+        if (r.doc && catalog) {
+            try {
+                ScopedTimer t("classify domains");
+                std::vector<terminology::WeightedText> inputs;
+                std::u32string outline;
+                for (const std::string& title : r.doc->outline_titles()) outline += to_u32(title) + U". ";
+                if (!outline.empty()) inputs.push_back({std::move(outline), 2.0});
+                const int pages = std::min(r.doc->page_count(), kClassifyPages);
+                for (int i = 0; i < pages; ++i) {
+                    const auto tp = pdf::TextPage::build(*r.doc->display_list(i), r.doc->page(i));
+                    const auto& pt = tp->page_text();
+                    for (std::size_t p = 0; p < pt.paragraphs().size(); ++p) {
+                        const auto& sp = pt.paragraphs()[p].span;
+                        const double w = (i == 0 && p < 3) ? 3.0 : 1.0;  // tiêu đề, tác giả, tóm tắt
+                        inputs.push_back({pt.text().substr(sp.begin, sp.size()), w});
+                    }
+                }
+                r.domains = terminology::classify(inputs, *catalog);
+            } catch (const std::exception& e) {
+                log::warn("Phân loại lĩnh vực thất bại: {}", e.what());
+            }
         }
         open_results_.push(std::move(r));
         glfwPostEmptyEvent();
@@ -499,6 +697,12 @@ void App::open_file(const std::filesystem::path& path) {
 }
 
 void App::poll_open_results() {
+    for (ExtractResult& r : extract_results_.drain()) {
+        if (r.ticket != open_ticket_) continue;
+        extracted_terms_ = std::move(r.terms);
+        extracting_ = false;
+        log::info("Đã trích {} thuật ngữ ứng viên", extracted_terms_.size());
+    }
     for (OpenResult& r : open_results_.drain()) {
         if (r.ticket != open_ticket_) continue;  // người dùng đã mở file khác
         loading_ = false;
@@ -509,6 +713,16 @@ void App::poll_open_results() {
         }
         viewer_.set_document(r.doc);
         set_status(file_name_utf8(r.path), false);
+        auto_domains_ = std::move(r.domains);
+        domain_override_.clear();
+        if (glossary_) {
+            glossary_->set_document(r.path);
+            apply_domains();
+            std::string summary;
+            for (const auto& d : auto_domains_) summary += std::format(" {} ({:.0f}%)", domain_name(d.domain_id), d.score * 100);
+            log::info("Lĩnh vực:{}", summary.empty() ? " chưa xác định" : summary);
+            start_term_extraction(r.doc, r.ticket);
+        }
         glfwSetWindowTitle(window_, std::format("{} — Pdfread", file_name_utf8(r.path)).c_str());
         if (!initial_view_applied_) {
             initial_view_applied_ = true;
@@ -551,6 +765,8 @@ void App::update_snapshot(int fb_width, int fb_height) {
         pdf::save_png(*pix, options_.snapshot_path);
         if (options_.select) log::info("SELECTION<<{}>>", viewer_.selection_text());
         if (popup_.visible()) log::info("TRANSLATION<<{}>>", popup_.text());
+        for (const std::string& issue : popup_.issues()) log::info("ISSUE<<{}>>", issue);
+        if (!auto_domains_.empty()) log::info("DOMAIN<<{}>>", auto_domains_.front().domain_id);
         log::info("Đã lưu ảnh chụp {} ({}x{})", path_to_utf8(options_.snapshot_path), fb_width, fb_height);
         exit_code_ = (timed_out || failed_open) ? 2 : 0;
         if (timed_out) log::warn("Hết thời gian chờ render, ảnh chụp có thể chưa đủ");
@@ -571,6 +787,14 @@ void App::on_refresh(GLFWwindow* window) {
 
 void App::on_content_scale(GLFWwindow* window, float xscale, float /*yscale*/) {
     if (App* app = app_from(window)) app->pending_scale_ = std::max(1.0f, xscale);
+}
+
+void App::on_focus(GLFWwindow* window, int focused) {
+    // Quay lại app sau khi sửa CSV bằng Excel/trình soạn thảo: đọc lại glossary đã đổi.
+    App* app = app_from(window);
+    if (app != nullptr && focused && app->glossary_ && app->glossary_->refresh()) {
+        log::info("Đã nạp lại glossary đã thay đổi trên đĩa");
+    }
 }
 
 }  // namespace pdfread::app

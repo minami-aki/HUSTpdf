@@ -17,6 +17,7 @@
       ]
     },
     "libmupdf",
+    "nlohmann-json",
     "nativefiledialog-extended"
   ],
   "features": {

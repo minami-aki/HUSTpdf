@@ -1,0 +1,31 @@
+term_en,term_vi,keep_english,notes,source
+drug,thuốc,0,dược chất,draft
+active pharmaceutical ingredient,dược chất,0,hoạt chất,draft
+excipient,tá dược,0,,draft
+dosage form,dạng bào chế,0,,draft
+formulation,công thức bào chế,0,,draft
+tablet,viên nén,0,,draft
+capsule,viên nang,0,,draft
+dissolution,độ hòa tan,0,,draft
+bioavailability,sinh khả dụng,0,,draft
+pharmacokinetics,dược động học,0,,draft
+pharmacodynamics,dược lực học,0,,draft
+half-life,thời gian bán thải,0,,draft
+dose,liều,0,,draft
+receptor,thụ thể,0,,draft
+ligand,phối tử,0,,draft
+inhibitor,chất ức chế,0,,draft
+agonist,chất chủ vận,0,,draft
+antagonist,chất đối kháng,0,,draft
+toxicity,độc tính,0,,draft
+side effect,tác dụng phụ,0,,draft
+medicinal chemistry,hóa dược,0,,draft
+drug delivery,dẫn truyền thuốc,0,,draft
+prodrug,tiền dược,0,,draft
+impurity,tạp chất,0,,draft
+stability testing,thử nghiệm độ ổn định,0,,draft
+good manufacturing practice,thực hành tốt sản xuất thuốc,0,GMP,draft
+HPLC,HPLC,1,sắc ký lỏng hiệu năng cao,draft
+clinical trial,thử nghiệm lâm sàng,0,,draft
+therapeutic,điều trị,0,,draft
+efficacy,hiệu lực,0,,draft

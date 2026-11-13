@@ -1,0 +1,34 @@
+term_en,term_vi,keep_english,notes,source
+stress,ứng suất,0,,draft
+strain,biến dạng,0,biến dạng tương đối,draft
+normal stress,ứng suất pháp,0,,draft
+shear stress,ứng suất tiếp,0,,draft
+von Mises stress,ứng suất von Mises,0,,draft
+principal stress,ứng suất chính,0,,draft
+yield strength,giới hạn chảy,0,,draft
+ultimate tensile strength,giới hạn bền kéo,0,,draft
+Young's modulus,mô đun đàn hồi,0,mô đun Young,draft
+Poisson's ratio,hệ số Poisson,0,,draft
+elasticity,tính đàn hồi,0,,draft
+plasticity,tính dẻo,0,,draft
+beam,dầm,0,,draft
+deflection,độ võng,0,,draft
+bending moment,mô men uốn,0,,draft
+shear force,lực cắt,0,,draft
+torsion,xoắn,0,,draft
+buckling,mất ổn định,0,oằn,draft
+fatigue,mỏi,0,mỏi vật liệu,draft
+fatigue life,tuổi thọ mỏi,0,,draft
+fracture,phá hủy,0,,draft
+crack,vết nứt,0,,draft
+finite element method,phương pháp phần tử hữu hạn,0,,draft
+FEM,FEM,1,phương pháp phần tử hữu hạn,draft
+mesh,lưới,0,lưới phần tử,draft
+boundary condition,điều kiện biên,0,,draft
+vibration,dao động,0,,draft
+natural frequency,tần số riêng,0,,draft
+damping,cản,0,giảm chấn,draft
+moment of inertia,mô men quán tính,0,,draft
+rigid body,vật rắn tuyệt đối,0,,draft
+load,tải trọng,0,,draft
+safety factor,hệ số an toàn,0,,draft

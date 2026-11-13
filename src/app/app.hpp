@@ -5,6 +5,7 @@
 // glfwWaitEvents(). Luồng nền (mở file, render tile) đánh thức UI bằng
 // glfwPostEmptyEvent() khi có kết quả. App đứng yên thì không vẽ gì.
 
+#include <atomic>
 #include <cstdint>
 #include <filesystem>
 #include <memory>
@@ -15,7 +16,11 @@
 #include "pdf/document.hpp"
 #include "pdf/render_service.hpp"
 #include "pdf/text_service.hpp"
+#include "terminology/glossary_store.hpp"
+#include "terminology/term_extractor.hpp"
+#include "text/protect.hpp"
 #include "translate/translation_service.hpp"
+#include "ui/glossary_window.hpp"
 #include "ui/texture_cache.hpp"
 #include "ui/translation_popup.hpp"
 #include "ui/viewer.hpp"
@@ -45,6 +50,7 @@ struct AppOptions {
     bool fit_page = false;
     std::optional<SelectSpec> select;
     std::filesystem::path font_dir;
+    std::filesystem::path data_dir;  // chứa domains.json, glossary/
 
     std::filesystem::path model_path;                     // rỗng: tự tìm trong model_search_dirs
     std::vector<std::filesystem::path> model_search_dirs;
@@ -52,6 +58,7 @@ struct AppOptions {
     bool add_generation_prompt = false;                   // xem translate::ModelConfig
     bool repack_weights = false;                          // xem translate::ModelConfig
     bool include_context = false;                         // thêm câu xung quanh vào prompt (thử nghiệm)
+    bool open_glossary = false;                           // mở sẵn cửa sổ glossary
 };
 
 class App {
@@ -72,6 +79,7 @@ private:
         std::uint64_t ticket = 0;
         std::filesystem::path path;
         std::shared_ptr<pdf::Document> doc;
+        std::vector<translate::DomainScore> domains;  // phân loại tự động
         std::string error;
     };
 
@@ -86,7 +94,13 @@ private:
     void update_snapshot(int fb_width, int fb_height);
 
     void update_translation();
-    void request_translation();
+    void request_translation(bool force_model = false);
+    void finish_translation();
+    void start_term_extraction(const std::shared_ptr<pdf::Document>& doc, std::uint64_t ticket);
+    void apply_domains();
+    [[nodiscard]] std::vector<translate::DomainScore> effective_domains() const;
+    [[nodiscard]] std::string domain_name(const std::string& id) const;
+    void draw_domain_combo();
     void draw_translation_popup();
     void choose_model_dialog();
     void load_model(const std::filesystem::path& path);
@@ -95,18 +109,43 @@ private:
     static void on_drop(GLFWwindow* window, int count, const char** paths);
     static void on_refresh(GLFWwindow* window);
     static void on_content_scale(GLFWwindow* window, float xscale, float yscale);
+    static void on_focus(GLFWwindow* window, int focused);
 
     GLFWwindow* window_;
     AppOptions options_;
 
+    struct ExtractResult {
+        std::uint64_t ticket = 0;
+        std::vector<terminology::TermCandidate> terms;
+    };
+    // Bản dịch đang hiển thị: để khôi phục placeholder khi stream và hậu kiểm khi xong.
+    struct ActiveTranslation {
+        std::uint64_t id = 0;
+        std::vector<text::Placeholder> placeholders;
+        std::vector<terminology::GlossaryEntry> terms;
+        std::unique_ptr<text::PlaceholderStream> stream;
+        std::string raw;  // bản dịch thô (còn placeholder)
+    };
+
+    std::shared_ptr<const terminology::DomainCatalog> catalog_;  // dùng chung với luồng loader
+    std::unique_ptr<terminology::GlossaryStore> glossary_;      // nullptr nếu thiếu data/domains.json
+    std::vector<translate::DomainScore> auto_domains_;
+    std::string domain_override_;  // rỗng = theo phân loại tự động
+    std::vector<terminology::TermCandidate> extracted_terms_;
+    bool extracting_ = false;
+    std::atomic<std::uint64_t> current_ticket_{0};
+    ActiveTranslation active_;
+
     ConcurrentQueue<OpenResult> open_results_;
-    ThreadPool loader_;  // mở tài liệu ở nền (1 luồng)
+    ConcurrentQueue<ExtractResult> extract_results_;
+    ThreadPool loader_;  // mở tài liệu, phân loại lĩnh vực, trích thuật ngữ ở nền (1 luồng)
     pdf::RenderService render_;
     pdf::TextService text_service_;
     translate::TranslationService translation_;
     ui::TextureCache textures_;
     ui::Viewer viewer_;
     ui::TranslationPopup popup_;
+    ui::GlossaryWindow glossary_window_;
 
     bool auto_translate_ = true;
     bool whole_sentence_ = true;  // bôi đen nửa câu -> dịch cả câu (đổi được trong popup)

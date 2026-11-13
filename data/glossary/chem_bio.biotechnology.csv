@@ -1,0 +1,31 @@
+term_en,term_vi,keep_english,notes,source
+biotechnology,công nghệ sinh học,0,,draft
+enzyme,enzyme,1,,draft
+protein,protein,1,,draft
+DNA,DNA,1,,draft
+RNA,RNA,1,,draft
+gene,gen,0,,draft
+genome,hệ gen,0,,draft
+gene expression,biểu hiện gen,0,,draft
+PCR,PCR,1,phản ứng chuỗi polymerase,draft
+cell culture,nuôi cấy tế bào,0,,draft
+cell,tế bào,0,,draft
+microorganism,vi sinh vật,0,,draft
+bacteria,vi khuẩn,0,,draft
+yeast,nấm men,0,,draft
+strain,chủng,0,,draft
+fermentation,lên men,0,,draft
+bioreactor,thiết bị phản ứng sinh học,0,,draft
+recombinant,tái tổ hợp,0,,draft
+plasmid,plasmid,1,,draft
+cloning,tạo dòng,0,,draft
+sequencing,giải trình tự,0,,draft
+metabolism,trao đổi chất,0,,draft
+substrate,cơ chất,0,,draft
+biomass,sinh khối,0,,draft
+antibody,kháng thể,0,,draft
+antigen,kháng nguyên,0,,draft
+CRISPR,CRISPR,1,,draft
+downstream processing,xử lý hạ nguồn,0,,draft
+yield,hiệu suất,0,,draft
+culture medium,môi trường nuôi cấy,0,,draft

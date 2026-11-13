@@ -21,9 +21,16 @@ add_executable(pdfread_tests
     text/test_sentence_splitter.cpp
     text/test_page_text.cpp
     context/test_translation_plan.cpp
+    text/test_protect.cpp
+    terminology/test_glossary.cpp
+    terminology/test_classifier.cpp
+    terminology/test_glossary_store.cpp
+    terminology/test_data_files.cpp
 )
 target_link_libraries(pdfread_tests PRIVATE
     pdfread_ui pdfread_test_support pdfread_options Catch2::Catch2WithMain)
+
+target_compile_definitions(pdfread_tests PRIVATE PDFREAD_DATA_DIR="${PROJECT_SOURCE_DIR}/data")
 
 catch_discover_tests(pdfread_tests)
 

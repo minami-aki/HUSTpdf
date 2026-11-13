@@ -1,0 +1,31 @@
+term_en,term_vi,keep_english,notes,source
+mechatronics,cơ điện tử,0,,draft
+actuator,cơ cấu chấp hành,0,,draft
+servo motor,động cơ servo,0,,draft
+stepper motor,động cơ bước,0,,draft
+DC motor,động cơ một chiều,0,,draft
+encoder,bộ mã hóa vòng quay,0,encoder,draft
+robot,robot,1,,draft
+manipulator,tay máy,0,,draft
+end effector,khâu tác động cuối,0,,draft
+gripper,bộ kẹp,0,,draft
+joint,khớp,0,khớp robot,draft
+link,khâu,0,khâu robot,draft
+degree of freedom,bậc tự do,0,,draft
+kinematics,động học,0,,draft
+forward kinematics,động học thuận,0,,draft
+inverse kinematics,động học ngược,0,,draft
+dynamics,động lực học,0,,draft
+workspace,không gian làm việc,0,,draft
+trajectory planning,lập quỹ đạo,0,,draft
+motion control,điều khiển chuyển động,0,,draft
+ball screw,vít me bi,0,,draft
+harmonic drive,hộp số sóng,0,harmonic drive,draft
+microcontroller,vi điều khiển,0,,draft
+PLC,PLC,1,bộ điều khiển logic khả trình,draft
+PWM,PWM,1,điều chế độ rộng xung,draft
+sensor,cảm biến,0,,draft
+sensor fusion,hợp nhất cảm biến,0,,draft
+limit switch,công tắc hành trình,0,,draft
+backlash,độ rơ,0,,draft
+payload,tải trọng,0,tải trọng mang của robot,draft

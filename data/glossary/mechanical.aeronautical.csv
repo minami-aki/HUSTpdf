@@ -1,0 +1,31 @@
+term_en,term_vi,keep_english,notes,source
+aircraft,tàu bay,0,máy bay,draft
+airfoil,biên dạng cánh,0,,draft
+wing,cánh,0,,draft
+fuselage,thân máy bay,0,,draft
+lift,lực nâng,0,,draft
+drag,lực cản,0,,draft
+thrust,lực đẩy,0,,draft
+angle of attack,góc tấn,0,,draft
+stall,thất tốc,0,,draft
+Mach number,số Mach,0,,draft
+subsonic,cận âm,0,dưới vận tốc âm thanh,draft
+supersonic,siêu âm,0,trên vận tốc âm thanh,draft
+boundary layer,lớp biên,0,,draft
+lift coefficient,hệ số lực nâng,0,,draft
+drag coefficient,hệ số lực cản,0,,draft
+jet engine,động cơ phản lực,0,,draft
+turbofan,động cơ phản lực cánh quạt đẩy,0,turbofan,draft
+propulsion,động cơ đẩy,0,lực đẩy; hệ thống đẩy,draft
+aileron,cánh liệng,0,,draft
+elevator,cánh lái độ cao,0,,draft
+rudder,cánh lái hướng,0,,draft
+flap,cánh tà,0,,draft
+pitch,chúc ngóc,0,góc pitch,draft
+roll,nghiêng cánh,0,góc roll,draft
+yaw,đảo hướng,0,góc yaw,draft
+flight control,điều khiển bay,0,,draft
+avionics,điện tử hàng không,0,,draft
+UAV,UAV,1,phương tiện bay không người lái,draft
+wind tunnel,ống khí động,0,,draft
+spacecraft,tàu vũ trụ,0,,draft

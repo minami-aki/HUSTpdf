@@ -1,0 +1,33 @@
+term_en,term_vi,keep_english,notes,source
+information security,an toàn thông tin,0,,draft
+cryptography,mật mã học,0,,draft
+encryption,mã hóa,0,,draft
+decryption,giải mã,0,,draft
+cipher,thuật toán mã hóa,0,bản mã: ciphertext,draft
+plaintext,bản rõ,0,,draft
+ciphertext,bản mã,0,,draft
+public key,khóa công khai,0,,draft
+private key,khóa bí mật,0,,draft
+symmetric encryption,mã hóa đối xứng,0,,draft
+asymmetric encryption,mã hóa bất đối xứng,0,,draft
+hash function,hàm băm,0,,draft
+digital signature,chữ ký số,0,,draft
+certificate,chứng thư số,0,,draft
+authentication,xác thực,0,,draft
+authorization,phân quyền,0,,draft
+access control,kiểm soát truy cập,0,,draft
+vulnerability,lỗ hổng,0,,draft
+exploit,mã khai thác,0,,draft
+attack,tấn công,0,,draft
+attacker,kẻ tấn công,0,,draft
+adversary,đối thủ,0,kẻ tấn công trong mô hình an ninh,draft
+malware,mã độc,0,,draft
+firewall,tường lửa,0,,draft
+intrusion detection system,hệ thống phát hiện xâm nhập,0,IDS,draft
+threat model,mô hình đe dọa,0,,draft
+side-channel attack,tấn công kênh kề,0,,draft
+phishing,lừa đảo trực tuyến,0,phishing,draft
+penetration testing,kiểm thử xâm nhập,0,,draft
+TLS,TLS,1,,draft
+AES,AES,1,,draft
+RSA,RSA,1,,draft

@@ -1,0 +1,31 @@
+term_en,term_vi,keep_english,notes,source
+textile,vật liệu dệt,0,hàng dệt,draft
+fabric,vải,0,,draft
+yarn,sợi,0,sợi xe,draft
+fiber,xơ,0,xơ dệt,draft
+spinning,kéo sợi,0,,draft
+weaving,dệt thoi,0,,draft
+knitting,dệt kim,0,,draft
+woven fabric,vải dệt thoi,0,,draft
+knitted fabric,vải dệt kim,0,,draft
+nonwoven,vải không dệt,0,,draft
+warp,sợi dọc,0,,draft
+weft,sợi ngang,0,,draft
+loom,máy dệt,0,khung cửi,draft
+garment,sản phẩm may,0,quần áo,draft
+apparel,hàng may mặc,0,,draft
+sewing,may,0,,draft
+seam,đường may,0,,draft
+stitch,mũi may,0,,draft
+pattern making,thiết kế mẫu,0,làm rập,draft
+dyeing,nhuộm,0,,draft
+finishing,hoàn tất,0,,draft
+printing,in hoa,0,in vải,draft
+cotton,bông,0,cotton,draft
+polyester,polyeste,0,,draft
+denier,denier,1,đơn vị độ mảnh,draft
+yarn count,chi số sợi,0,,draft
+tensile strength,độ bền kéo,0,,draft
+shrinkage,độ co,0,,draft
+colorfastness,độ bền màu,0,,draft
+fashion,thời trang,0,,draft

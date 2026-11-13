@@ -1,0 +1,35 @@
+term_en,term_vi,keep_english,notes,source
+machine learning,học máy,0,,draft
+deep learning,học sâu,0,,draft
+artificial intelligence,trí tuệ nhân tạo,0,,draft
+neural network,mạng nơ-ron,0,,draft
+convolutional neural network,mạng nơ-ron tích chập,0,CNN,draft
+recurrent neural network,mạng nơ-ron hồi quy,0,RNN,draft
+transformer,transformer,1,kiến trúc Transformer,draft
+attention,cơ chế chú ý,0,attention,draft
+embedding,embedding,1,vectơ biểu diễn,draft
+training,huấn luyện,0,,draft
+dataset,tập dữ liệu,0,,draft
+training set,tập huấn luyện,0,,draft
+test set,tập kiểm tra,0,,draft
+validation set,tập kiểm định,0,,draft
+classification,phân loại,0,,draft
+regression,hồi quy,0,,draft
+clustering,phân cụm,0,,draft
+feature,đặc trưng,0,,draft
+label,nhãn,0,,draft
+loss function,hàm mất mát,0,,draft
+gradient descent,hạ gradient,0,,draft
+backpropagation,lan truyền ngược,0,,draft
+overfitting,quá khớp,0,,draft
+underfitting,chưa khớp,0,,draft
+hyperparameter,siêu tham số,0,,draft
+reinforcement learning,học tăng cường,0,,draft
+natural language processing,xử lý ngôn ngữ tự nhiên,0,NLP,draft
+computer vision,thị giác máy tính,0,,draft
+large language model,mô hình ngôn ngữ lớn,0,LLM,draft
+fine-tuning,tinh chỉnh,0,,draft
+inference,suy luận,0,,draft
+precision,độ chính xác dương,0,precision,draft
+recall,độ phủ,0,recall,draft
+accuracy,độ chính xác,0,,draft
