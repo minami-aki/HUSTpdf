@@ -96,6 +96,34 @@ Bổ sung cho [CLAUDE.md](../CLAUDE.md). Mỗi mục ghi ngày chốt; muốn đ
 - Phát hiện vùng không dịch (`text/protect`): công thức (token có ký hiệu toán làm nhân, mở rộng qua toán tử/số/tên biến ngắn/ngoặc), đại lượng (số + đơn vị trong danh sách, `25%`, `m/s`), mã (`foo()`, snake_case, camelCase, `0x…`, `::`, `->`), URL/email.
 - Gõ tiếng Việt trong cửa sổ glossary: chưa kiểm được (cần thao tác tay với bộ gõ). Dự kiến: Unikey/EVKey (gửi phím) dùng được; bộ gõ TSF của Windows có thể không hiện chữ đang soạn. Luôn có đường sửa CSV bằng Excel rồi quay lại app.
 
+## 2026-11-13 — M6 (phần 1): SQLite, tải mô hình, đánh giá
+
+- Người dùng chốt: glossary vẫn là CSV + chỉ mục trong bộ nhớ (SQLite chỉ giữ cài đặt, cache bản dịch, thông tin tài liệu); VC++ runtime đóng gói app-local; mô hình tải về `%LOCALAPPDATA%\Pdfread\models`; tạo tập đánh giá mẫu (`tools/eval/sample.csv`, 32 câu, 8 nhóm).
+- Cơ sở dữ liệu `%LOCALAPPDATA%\Pdfread\pdfread.db` (WAL). Khóa cache = SHA-256(prompt gửi mô hình + tên file mô hình + biến thể chat template); prompt đã chứa câu chuẩn hóa, ngữ cảnh và đúng các thuật ngữ được chỉ định, nên sửa thuật ngữ khác không làm mất cache. Lưu bản dịch thô (còn placeholder); chỉ lưu bản dịch không có cảnh báo hậu kiểm; tối đa 20 000 mục (LRU).
+- Dấu vân tay tài liệu = SHA-256(kích thước + 1 MiB đầu + 1 MiB cuối), không băm cả file. Phân loại lĩnh vực đã cache gắn với SHA-256 của `domains.json`.
+- Bộ tải: `.part` + HTTP Range, tự thử lại 5 lần, kiểm tra dung lượng đĩa, SHA-256 tự viết (`util/sha256`) trước khi đổi tên.
+
+## 2026-11-13 — tinh chỉnh dịch tài liệu hạt nhân (người dùng chốt: bỏ placeholder cho đại lượng)
+
+Tập `tools/eval/nuclear.csv` (40 câu hạt nhân – nguyên tử, có ngữ cảnh), mô hình HY-MT1.5-1.8B Q4_K_M, CPU Ryzen 5 4600H.
+
+| Lần | Cấu hình | Thuật ngữ đúng | Lỗi placeholder | Mất số | Độ trễ TB / p95 |
+|---|---|---|---|---|---|
+| 1 (glossary 508 mục) | 1 dịch trơn | 31,9 % (38/119) | 3 | – | 3,0 / 4,5 s |
+| 1 | 2 + glossary | 100 % (119/119) | 2 | – | 3,2 / 4,5 s |
+| cuối | 1 dịch trơn | 29,7 % (41/138) | 3 | 3 | 3,0 / 3,9 s |
+| cuối | 2 + glossary | 100 % (138/138) | 1* | 1* | 3,2 / 4,6 s |
+| cuối | 3 + ngữ cảnh | 97,8 % | 1 | 3 | 3,4 / 4,5 s |
+
+\* câu "17 × 17", đã sửa sau lần chạy này (3/3 lần chạy lại đúng).
+
+- Lỗi nghĩa thấy khi đọc bản dịch (không phải lỗi thuật ngữ chuyên ngành mà là từ thường bị hiểu sai trong ngữ cảnh hạt nhân): activity → "hoạt động", exposure → "phơi bày", shutdown → "máy móc ngừng hoạt động", rated power → "công suất được đánh giá", magnetic field → "trường từ", transition → "chuyển đổi", enriched → "tinh chế", sublevel → "tầng sublevel". Thêm ~35 mục vào glossary hạt nhân (hoạt độ, chiếu xạ, dừng lò, công suất định mức, từ trường, chuyển dời, làm giàu, phân mức, giam giữ…) và các cụm dài hơn để glossary không cắt mất nghĩa ("effective dose limit" trước đây khớp "effective dose" và mất chữ "giới hạn").
+- "binding energy per nucleon" đổi thành "năng lượng liên kết trên mỗi nuclôn": với "năng lượng liên kết riêng", mô hình tự thêm "của mỗi hạt nhân" (sai).
+- Thuật ngữ glossary viết thường đứng đầu câu ("dãy Balmer…"): viết hoa chữ đầu bản dịch nếu câu gốc viết hoa (`text::match_initial_case`, xử lý cả chữ có dấu).
+- **Lệch đặc tả mục 5.3 (đơn vị):** đo A/B trên 72 câu (tập chung + hạt nhân), cấu hình 2: đại lượng thành placeholder → 3 lỗi placeholder, 4 con số bị mất ("500 h", "4.95%"…); để nguyên trong câu → 1 lỗi, 2 con số mất (đều do "17 × 17"). Mô hình chép nguyên "8.8 MeV", "20 mSv", "662 keV" rất ổn định nhưng hay bỏ rơi token ⟦U…⟧. Người dùng chốt: không thay đại lượng (số + đơn vị, %, tích số thuần như "17 × 17") bằng placeholder; công thức, mã, URL vẫn dùng placeholder. Thay vào đó hậu kiểm "mất số" (`text::missing_numbers`, coi "8.8" = "8,8"): popup cảnh báo "Bản dịch làm mất số: …" và bản dịch đó không vào cache. Bật lại bằng `PlanOptions::protect_quantities` / `pdfread-eval --quantity-placeholders`.
+- Bổ sung đơn vị hạt nhân vào bộ nhận diện đại lượng (eV…GeV, Bq, Ci, Gy, Sv, rem, b/barn, u, MWe, GWd/tU…) — dùng khi bật bảo vệ đại lượng.
+- Mẫu prompt ngữ cảnh (cấu hình 3) vẫn có lúc dịch câu ngữ cảnh thay cho câu chính (câu #1) — giữ quyết định M4: tắt mặc định.
+
 ## Thông tin tham chiếu
 
 - vcpkg baseline: `177e8175121536d414f405ed8b3099b325a42638` (2026-11-11).

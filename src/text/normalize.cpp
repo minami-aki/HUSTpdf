@@ -1,5 +1,10 @@
 #include "text/normalize.hpp"
 
+#include <algorithm>
+#include <cctype>
+
+#include "util/utf8.hpp"
+
 namespace pdfread::text {
 
 bool is_space(char32_t c) noexcept {
@@ -53,6 +58,51 @@ std::size_t append_normalized(std::u32string& out, char32_t c) {
     }
     out.push_back(c);
     return 1;
+}
+
+char32_t to_upper(char32_t c) noexcept {
+    if (c >= U'a' && c <= U'z') return c - 32;
+    if (c >= 0xE0 && c <= 0xFE && c != 0xF7) return c - 0x20;               // Latin-1: à…þ
+    if (c >= 0x100 && c <= 0x17F && c != 0x131 && c != 0x138 && c != 0x149 && c != 0x17F) {
+        // Latin Extended-A: cặp hoa/thường liền nhau (đ U+0111 -> Đ U+0110).
+        const bool odd_lower = (c < 0x138) || (c > 0x149 && c < 0x179);
+        if (odd_lower) return (c % 2 == 1) ? c - 1 : c;
+        return (c % 2 == 0) ? c - 1 : c;                                  // 0x139..0x148, 0x179..0x17E
+    }
+    if (c == 0x1A1) return 0x1A0;  // ơ -> Ơ
+    if (c == 0x1B0) return 0x1AF;  // ư -> Ư
+    if (c >= 0x1EA0 && c <= 0x1EFF) return (c % 2 == 1) ? c - 1 : c;    // Latin Extended Additional: ạ ả ấ…
+    return c;
+}
+
+std::string match_initial_case(std::string_view translation, std::string_view source) {
+    std::string out(translation);
+    const std::u32string src = to_u32(source.substr(0, std::min<std::size_t>(source.size(), 16)));
+    std::size_t si = 0;
+    while (si < src.size() && !is_letter(src[si]) && !is_digit(src[si])) ++si;
+    if (si >= src.size() || !is_upper(src[si])) return out;
+    // Chữ cái đầu tiên của bản dịch (bỏ qua khoảng trắng, ngoặc, dấu nháy).
+    std::size_t pos = 0;
+    while (pos < out.size()) {
+        const auto b = static_cast<unsigned char>(out[pos]);
+        if (b < 0x80 && !std::isalnum(b)) {
+            ++pos;
+            continue;
+        }
+        break;
+    }
+    if (pos >= out.size()) return out;
+    std::size_t len = 1;
+    const auto b0 = static_cast<unsigned char>(out[pos]);
+    if (b0 >= 0xF0) len = 4;
+    else if (b0 >= 0xE0) len = 3;
+    else if (b0 >= 0xC0) len = 2;
+    const std::u32string first = to_u32(std::string_view(out).substr(pos, len));
+    if (first.size() != 1 || to_upper(first[0]) == first[0]) return out;  // không phải chữ thường
+    std::string upper;
+    append_utf8(upper, to_upper(first[0]));
+    out.replace(pos, len, upper);
+    return out;
 }
 
 }  // namespace pdfread::text

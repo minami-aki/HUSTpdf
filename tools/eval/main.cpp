@@ -12,7 +12,7 @@
 //
 //   pdfread-eval --model models/HY-MT1.5-1.8B-Q4_K_M.gguf [--input tools/eval/sample.csv]
 //                [--out eval_results.csv] [--summary eval_summary.csv] [--configs 123]
-//                [--data data] [--threads N] [--limit N]
+//                [--data data] [--threads N] [--limit N] [--quantity-placeholders]
 
 #include <algorithm>
 #include <atomic>
@@ -35,6 +35,7 @@
 #include "terminology/domains.hpp"
 #include "terminology/glossary.hpp"
 #include "terminology/glossary_store.hpp"
+#include "text/normalize.hpp"
 #include "text/protect.hpp"
 #include "translate/llama_translator.hpp"
 #include "util/cmdline.hpp"
@@ -64,6 +65,7 @@ struct Result {
     int terms_ok = 0;
     int placeholders = 0;
     int placeholder_errors = 0;
+    int numbers_missing = 0;
     translate::TranslationStats stats;
 };
 
@@ -156,6 +158,7 @@ int main(int argc, char** argv) {
     std::filesystem::path data_dir = default_data_dir(args[0]);
     std::string configs = "123";
     std::size_t limit = 0;
+    text::ProtectOptions protect_options{.quantities = false};  // như app (PlanOptions::protect_quantities)
     for (std::size_t i = 1; i < args.size(); ++i) {
         const std::string& a = args[i];
         auto next = [&]() -> std::string { return i + 1 < args.size() ? args[++i] : std::string(); };
@@ -167,6 +170,7 @@ int main(int argc, char** argv) {
         else if (a == "--configs") configs = next();
         else if (a == "--threads") config.threads = std::atoi(next().c_str());
         else if (a == "--limit") limit = static_cast<std::size_t>(std::atoi(next().c_str()));
+        else if (a == "--quantity-placeholders") protect_options.quantities = true;
         else if (a == "--verbose") log::set_level(log::Level::Debug);
         else {
             std::fprintf(stderr, "Tham số không rõ: %s\n", a.c_str());
@@ -209,7 +213,7 @@ int main(int argc, char** argv) {
             if (sub == nullptr) std::fprintf(stderr, "Cảnh báo: lĩnh vực không rõ '%s' (dòng %zu)\n", s.domain.c_str(), i + 2);
 
             const std::u32string u = to_u32(s.en);
-            const auto spans = text::find_protected(u);
+            const auto spans = text::find_protected(u, protect_options);
             std::vector<text::Span> excluded;
             for (const auto& p : spans) excluded.push_back(p.span);
             std::vector<translate::DomainScore> domains;
@@ -245,6 +249,8 @@ int main(int argc, char** argv) {
                 const text::RestoreResult rr = text::restore_placeholders(r.raw, ph.placeholders);
                 r.translation = rr.text;
                 while (!r.translation.empty() && (r.translation.back() == '\n' || r.translation.back() == ' ')) r.translation.pop_back();
+                r.translation = text::match_initial_case(r.translation, s.en);
+                r.numbers_missing = static_cast<int>(text::missing_numbers(s.en, r.translation).size());
                 r.placeholders = static_cast<int>(ph.placeholders.size());
                 r.placeholder_errors = static_cast<int>(rr.missing.size() + rr.duplicated.size() + rr.unknown.size());
                 const auto bad = terminology::check_terms(rr.text, terms);
@@ -260,21 +266,21 @@ int main(int argc, char** argv) {
         // Kết quả từng câu.
         std::vector<std::vector<std::string>> rows = {
             {"id", "group", "domain", "config", "en", "context", "reference", "translation", "terms", "terms_total",
-             "terms_ok", "terms_violated", "placeholders", "placeholder_errors", "first_token_ms", "total_ms",
+             "terms_ok", "terms_violated", "placeholders", "placeholder_errors", "numbers_missing", "first_token_ms", "total_ms",
              "prompt_tokens", "output_tokens", "raw"}};
         for (const Result& r : results) {
             const Sample& s = samples[r.index];
             rows.push_back({std::to_string(r.index + 1), r.group, s.domain, config_name(r.config), s.en, s.context,
                             s.reference, r.translation, r.terms, std::to_string(r.terms_total), std::to_string(r.terms_ok),
                             r.violated, std::to_string(r.placeholders), std::to_string(r.placeholder_errors),
-                            std::format("{:.0f}", r.stats.first_token_ms), std::format("{:.0f}", r.stats.total_ms),
+                            std::to_string(r.numbers_missing), std::format("{:.0f}", r.stats.first_token_ms), std::format("{:.0f}", r.stats.total_ms),
                             std::to_string(r.stats.prompt_tokens), std::to_string(r.stats.output_tokens), r.raw});
         }
         write_csv(out_path, rows);
 
         // Tổng hợp theo nhóm lĩnh vực × cấu hình (+ dòng "ALL").
         struct Agg {
-            int sentences = 0, terms_total = 0, terms_ok = 0, placeholders = 0, placeholder_errors = 0;
+            int sentences = 0, terms_total = 0, terms_ok = 0, placeholders = 0, placeholder_errors = 0, numbers_missing = 0;
             std::vector<double> latency, first_token;
         };
         std::map<std::pair<std::string, int>, Agg> agg;
@@ -286,15 +292,16 @@ int main(int argc, char** argv) {
                 a.terms_ok += r.terms_ok;
                 a.placeholders += r.placeholders;
                 a.placeholder_errors += r.placeholder_errors;
+                a.numbers_missing += r.numbers_missing;
                 a.latency.push_back(r.stats.total_ms);
                 a.first_token.push_back(r.stats.first_token_ms);
             }
         }
         std::vector<std::vector<std::string>> summary = {
             {"group", "group_name", "config", "sentences", "terms_total", "terms_ok", "term_accuracy_pct", "placeholders",
-             "placeholder_errors", "latency_mean_ms", "latency_p95_ms", "first_token_mean_ms"}};
-        std::printf("\n%-12s %-20s %5s %12s %10s %10s %10s %10s\n", "nhóm", "cấu hình", "câu", "thuật ngữ", "đúng %",
-                    "ph lỗi", "TB ms", "p95 ms");
+             "placeholder_errors", "numbers_missing", "latency_mean_ms", "latency_p95_ms", "first_token_mean_ms"}};
+        std::printf("\n%-12s %-20s %5s %12s %10s %10s %10s %10s %10s\n", "nhóm", "cấu hình", "câu", "thuật ngữ", "đúng %",
+                    "ph lỗi", "mất số", "TB ms", "p95 ms");
         for (const auto& [key, a] : agg) {
             const auto& [g, c] = key;
             const auto grp = std::find_if(catalog_copy.groups().begin(), catalog_copy.groups().end(),
@@ -309,10 +316,11 @@ int main(int argc, char** argv) {
             const double p95 = percentile(a.latency, 0.95);
             summary.push_back({g, gname, config_name(c), std::to_string(a.sentences), std::to_string(a.terms_total),
                                std::to_string(a.terms_ok), std::format("{:.1f}", acc), std::to_string(a.placeholders),
-                               std::to_string(a.placeholder_errors), std::format("{:.0f}", mean),
+                               std::to_string(a.placeholder_errors), std::to_string(a.numbers_missing),
+                               std::format("{:.0f}", mean),
                                std::format("{:.0f}", p95), std::format("{:.0f}", ft)});
-            std::printf("%-12s %-20s %5d %6d/%-5d %10.1f %10d %10.0f %10.0f\n", g.c_str(), config_name(c), a.sentences,
-                        a.terms_ok, a.terms_total, acc, a.placeholder_errors, mean, p95);
+            std::printf("%-12s %-20s %5d %6d/%-5d %10.1f %10d %10d %10.0f %10.0f\n", g.c_str(), config_name(c), a.sentences,
+                        a.terms_ok, a.terms_total, acc, a.placeholder_errors, a.numbers_missing, mean, p95);
         }
         write_csv(summary_path, summary);
         std::printf("\nĐã ghi %s và %s\n", path_to_utf8(out_path).c_str(), path_to_utf8(summary_path).c_str());

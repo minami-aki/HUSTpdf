@@ -23,7 +23,11 @@ struct ProtectedSpan {
 };
 
 // Tìm các vùng không dịch trong một câu/đoạn (không chồng lấn, theo thứ tự).
-[[nodiscard]] std::vector<ProtectedSpan> find_protected(std::u32string_view text);
+struct ProtectOptions {
+    bool quantities = true;  // số + đơn vị ("145 MPa", "25%")
+};
+
+[[nodiscard]] std::vector<ProtectedSpan> find_protected(std::u32string_view text, const ProtectOptions& options = {});
 
 struct Placeholder {
     std::string token;     // "⟦F1⟧"
@@ -46,6 +50,10 @@ struct RestoreResult {
     std::vector<std::string> unknown;     // placeholder lạ do mô hình tự sinh
     [[nodiscard]] bool ok() const noexcept { return missing.empty() && duplicated.empty() && unknown.empty(); }
 };
+
+// Hậu kiểm: các con số trong câu gốc ("8.8", "235", "4.95") không còn trong bản dịch.
+// Dấu thập phân "." và "," coi như nhau ("8.8" = "8,8").
+[[nodiscard]] std::vector<std::string> missing_numbers(std::string_view source, std::string_view translation);
 
 [[nodiscard]] RestoreResult restore_placeholders(std::string_view translated, const std::vector<Placeholder>& placeholders);
 

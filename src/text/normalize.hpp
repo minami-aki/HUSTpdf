@@ -2,6 +2,7 @@
 // Làm sạch ký tự lấy từ PDF.
 
 #include <string>
+#include <string_view>
 
 namespace pdfread::text {
 
@@ -21,5 +22,12 @@ namespace pdfread::text {
 //  - còn lại giữ nguyên
 // Trả số ký tự đã ghi (0, 1, 2 hoặc 3).
 std::size_t append_normalized(std::u32string& out, char32_t c);
+
+// Chữ hoa tương ứng của một chữ thường Latin (gồm chữ tiếng Việt có dấu); ký tự khác giữ nguyên.
+[[nodiscard]] char32_t to_upper(char32_t c) noexcept;
+
+// Bản dịch bắt đầu bằng chữ thường trong khi câu gốc bắt đầu bằng chữ hoa (thường do thuật
+// ngữ glossary viết thường đứng đầu câu: "dãy Balmer tương ứng…") -> viết hoa chữ đầu.
+[[nodiscard]] std::string match_initial_case(std::string_view translation, std::string_view source);
 
 }  // namespace pdfread::text

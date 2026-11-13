@@ -138,7 +138,7 @@ mass spectrometry,khối phổ,0,,draft
 mass spectrometer,khối phổ kế,0,,draft
 nuclear structure,cấu trúc hạt nhân,0,,draft
 binding energy,năng lượng liên kết,0,,draft
-binding energy per nucleon,năng lượng liên kết riêng,0,năng lượng liên kết trên một nuclôn,draft
+binding energy per nucleon,năng lượng liên kết trên mỗi nuclôn,0,còn gọi: năng lượng liên kết riêng,draft
 mass defect,độ hụt khối,0,,draft
 mass excess,độ dư khối,0,,draft
 mass-energy equivalence,tương đương khối lượng - năng lượng,0,,draft
@@ -507,3 +507,37 @@ non-destructive testing,kiểm tra không phá hủy,0,NDT,draft
 radioactive tracer,chất đánh dấu phóng xạ,0,,draft
 Mössbauer effect,hiệu ứng Mössbauer,0,,draft
 nuclear magnetic resonance,cộng hưởng từ hạt nhân,0,NMR,draft
+activity,hoạt độ,0,hoạt độ phóng xạ (Bq),draft
+exponential decay,phân rã theo hàm mũ,0,,draft
+exponentially,theo hàm mũ,0,,draft
+exposure,chiếu xạ,0,,draft
+effective dose limit,giới hạn liều hiệu dụng,0,,draft
+annual dose limit,giới hạn liều hằng năm,0,,draft
+shutdown,dừng lò,0,,draft
+rated power,công suất định mức,0,,draft
+thermal power,công suất nhiệt,0,,draft
+borated water,nước pha bo,0,,draft
+enriched uranium,urani đã làm giàu,0,,draft
+enriched,làm giàu,0,,draft
+pellet,viên,0,viên nhiên liệu,draft
+magnetic field,từ trường,0,,draft
+electric field,điện trường,0,,draft
+transition,chuyển dời,0,chuyển dời giữa các mức,draft
+phase transition,chuyển pha,0,,draft
+electric dipole,lưỡng cực điện,0,,draft
+electric dipole transition,chuyển dời lưỡng cực điện,0,,draft
+magnetic dipole transition,chuyển dời lưỡng cực từ,0,,draft
+forbidden transition,chuyển dời cấm,0,,draft
+lifetime,thời gian sống,0,,draft
+sublevel,phân mức,0,,draft
+confinement,giam giữ,0,,draft
+confined,giam giữ,0,,draft
+plasma confinement,giam giữ plasma,0,,draft
+fusion,tổng hợp,0,tổng hợp hạt nhân / nhiệt hạch,draft
+fusion power,công suất nhiệt hạch,0,,draft
+exothermic reaction,phản ứng tỏa năng lượng,0,,draft
+endothermic reaction,phản ứng thu năng lượng,0,,draft
+exothermic,tỏa năng lượng,0,,draft
+endothermic,thu năng lượng,0,,draft
+build-up,tích tụ,0,,draft
+uranium dioxide pellet,viên urani đioxit,0,,draft

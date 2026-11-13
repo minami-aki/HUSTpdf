@@ -153,7 +153,8 @@ std::optional<TranslationPlan> make_plan(const PageText& page, Span selected, co
 
     // Vùng không dịch (công thức, mã, đơn vị…) -> placeholder.
     const std::vector<text::ProtectedSpan> protected_spans =
-        options.protect ? text::find_protected(u) : std::vector<text::ProtectedSpan>{};
+        options.protect ? text::find_protected(u, {.quantities = options.protect_quantities})
+                        : std::vector<text::ProtectedSpan>{};
 
     // Thuật ngữ glossary thực sự có trong text (ngoài vùng không dịch). Chỉ thuật ngữ đã xác
     // nhận và thuộc người dùng / tài liệu / lĩnh vực của tài liệu mới vào prompt.

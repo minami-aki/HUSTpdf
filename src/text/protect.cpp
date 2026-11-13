@@ -20,13 +20,17 @@ struct Token {
 constexpr std::u32string_view kMathChars =
     U"=<>≤≥≈≠±×÷∑∏∫∂∇√∞∈∉⊂⊆∀∃→⇒⇔^∝′·∘≡≅∼";
 
-constexpr std::array<std::u32string_view, 80> kUnits{
+constexpr auto kUnits = std::to_array<std::u32string_view>({
     U"s",   U"ms",  U"us",  U"µs",  U"μs",  U"ns",  U"ps",  U"min", U"h",   U"Hz",  U"kHz", U"MHz", U"GHz", U"THz",
     U"V",   U"mV",  U"µV",  U"kV",  U"MV",  U"A",   U"mA",  U"µA",  U"μA",  U"kA",  U"W",   U"mW",  U"kW",  U"MW",
     U"GW",  U"Ω",   U"kΩ",  U"MΩ",  U"mΩ",  U"F",   U"mF",  U"µF",  U"μF",  U"nF",  U"pF",  U"H",   U"mH",  U"µH",
     U"K",   U"°C",  U"°F",  U"Pa",  U"kPa", U"MPa", U"GPa", U"bar", U"N",   U"kN",  U"Nm",  U"J",   U"kJ",  U"MJ",
     U"Wh",  U"kWh", U"kg",  U"g",   U"mg",  U"m",   U"mm",  U"cm",  U"µm",  U"μm",  U"nm",  U"km",  U"L",   U"mL",
-    U"mol", U"dB",  U"dBm", U"rpm", U"bit", U"bits", U"kbps", U"Mbps", U"Gbps", U"ppm"};
+    U"mol", U"dB",  U"dBm", U"rpm", U"bit", U"bits", U"kbps", U"Mbps", U"Gbps", U"ppm",
+    // Hạt nhân – nguyên tử: năng lượng, hoạt độ, liều, tiết diện, khối lượng nguyên tử, công suất nhà máy.
+    U"eV",  U"meV", U"keV", U"MeV", U"GeV", U"TeV", U"Bq",  U"kBq", U"MBq", U"GBq", U"TBq", U"Ci",  U"mCi", U"µCi",
+    U"μCi", U"Gy",  U"cGy", U"mGy", U"µGy", U"μGy", U"Sv",  U"mSv", U"µSv", U"μSv", U"rem", U"mrem", U"b",  U"mb",
+    U"barn", U"barns", U"u", U"MWe", U"MWt", U"MWth", U"GWe", U"GWd", U"MWd", U"t", U"tU", U"tHM", U"µg",  U"μg",  U"ng",  U"Torr", U"atm"});
 
 bool is_unit(std::u32string_view t) {
     if (std::find(kUnits.begin(), kUnits.end(), t) != kUnits.end()) return true;
@@ -188,7 +192,7 @@ std::u32string_view view(std::u32string_view s, Span sp) { return s.substr(sp.be
 
 }  // namespace
 
-std::vector<ProtectedSpan> find_protected(std::u32string_view s) {
+std::vector<ProtectedSpan> find_protected(std::u32string_view s, const ProtectOptions& options) {
     const std::vector<Token> tokens = tokenize(s);
     std::vector<ProtectedSpan> out;
     std::vector<bool> used(tokens.size(), false);
@@ -209,13 +213,13 @@ std::vector<ProtectedSpan> find_protected(std::u32string_view s) {
             continue;
         }
         // Đại lượng: số + đơn vị ("145 MPa"), hoặc liền nhau ("25%", "10V").
-        if (is_number(t) && i + 1 < tokens.size() && !tokens[i].trailing_punct && is_unit(view(s, tokens[i + 1].core))) {
+        if (options.quantities && is_number(t) && i + 1 < tokens.size() && !tokens[i].trailing_punct && is_unit(view(s, tokens[i + 1].core))) {
             out.push_back({{tokens[i].core.begin, tokens[i + 1].core.end}, ProtectKind::Quantity});
             used[i] = used[i + 1] = true;
             ++i;
             continue;
         }
-        if (t.size() >= 2 && t.back() == U'%' && is_number(t.substr(0, t.size() - 1))) {
+        if (options.quantities && t.size() >= 2 && t.back() == U'%' && is_number(t.substr(0, t.size() - 1))) {
             out.push_back({tokens[i].core, ProtectKind::Quantity});
             used[i] = true;
             continue;
@@ -243,8 +247,18 @@ std::vector<ProtectedSpan> find_protected(std::u32string_view s) {
             for (std::size_t p = span.end; bal > 0 && p < tokens[last].span.end; ++p) {
                 if (s[p] == U')' && --bal == 0) span.end = p + 1;
             }
-            out.push_back({span, ProtectKind::Formula});
             for (std::size_t k = first; k <= last; ++k) used[k] = true;
+            // Không bảo vệ đại lượng: "17 × 17" (chỉ số và dấu nhân, như kích thước mảng) cũng
+            // để nguyên — mô hình chép đúng, còn placeholder thì hay bị bỏ mất.
+            const std::u32string_view body = s.substr(span.begin, span.size());
+            const bool numeric_product = std::all_of(body.begin(), body.end(), [](char32_t c) {
+                return is_digit(c) || is_space(c) || c == U'.' || c == U',' || c == U'×';
+            });
+            if (!options.quantities && numeric_product) {
+                i = last;
+                continue;
+            }
+            out.push_back({span, ProtectKind::Formula});
             i = last;
         }
     }
@@ -401,6 +415,44 @@ std::string PlaceholderStream::flush() {
     if (space_after_pending_ && !out.empty() && alnum_byte(out.front())) out.insert(out.begin(), ' ');
     space_after_pending_ = false;
     if (!out.empty()) last_out_ = out.back();
+    return out;
+}
+
+namespace {
+
+std::vector<std::string> numbers_in(std::string_view s) {
+    std::vector<std::string> out;
+    auto digit = [](char c) { return c >= '0' && c <= '9'; };
+    for (std::size_t i = 0; i < s.size();) {
+        if (!digit(s[i])) {
+            ++i;
+            continue;
+        }
+        std::size_t j = i;
+        while (j < s.size() && (digit(s[j]) || ((s[j] == '.' || s[j] == ',') && j + 1 < s.size() && digit(s[j + 1])))) ++j;
+        out.emplace_back(s.substr(i, j - i));
+        i = j;
+    }
+    return out;
+}
+
+std::string unify_decimal(std::string_view s) {
+    std::string out(s);
+    std::replace(out.begin(), out.end(), ',', '.');
+    return out;
+}
+
+}  // namespace
+
+std::vector<std::string> missing_numbers(std::string_view source, std::string_view translation) {
+    const std::string target = unify_decimal(translation);
+    std::vector<std::string> out;
+    for (const std::string& n : numbers_in(source)) {
+        if (target.find(unify_decimal(n)) == std::string::npos &&
+            std::find(out.begin(), out.end(), n) == out.end()) {
+            out.push_back(n);
+        }
+    }
     return out;
 }
 

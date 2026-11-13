@@ -135,13 +135,21 @@ TEST_CASE("make_plan adds glossary terms, placeholders and glossary answers", "[
 
     const auto plan = context::make_plan(pt, find(pt, "von Mises stress reaches 145"), opts);
     REQUIRE(plan);
-    // "80 K" và "145 MPa" thành placeholder; chỉ thuật ngữ của lĩnh vực tài liệu vào prompt.
-    CHECK(plan->request.text == "For a temperature rise of ⟦U1⟧ the computed von Mises stress reaches ⟦U2⟧.");
-    REQUIRE(plan->placeholders.size() == 2);
-    CHECK(plan->placeholders[1].original == "145 MPa");
+    // Mặc định đại lượng giữ nguyên trong câu; chỉ thuật ngữ của lĩnh vực tài liệu vào prompt.
+    CHECK(plan->request.text == "For a temperature rise of 80 K the computed von Mises stress reaches 145 MPa.");
+    CHECK(plan->placeholders.empty());
     REQUIRE(plan->request.terms.size() == 1);
     CHECK(plan->request.terms[0].term_en == "von Mises stress");
     CHECK(plan->request.domains.size() == 1);
+
+    // Bật bảo vệ đại lượng: "80 K" và "145 MPa" thành placeholder.
+    context::PlanOptions with_q = opts;
+    with_q.protect_quantities = true;
+    const auto plan_q = context::make_plan(pt, find(pt, "von Mises stress reaches 145"), with_q);
+    REQUIRE(plan_q);
+    CHECK(plan_q->request.text == "For a temperature rise of ⟦U1⟧ the computed von Mises stress reaches ⟦U2⟧.");
+    REQUIRE(plan_q->placeholders.size() == 2);
+    CHECK(plan_q->placeholders[1].original == "145 MPa");
 
     // Một từ có trong glossary: trả lời trực tiếp, kèm nghĩa ở lĩnh vực khác.
     const auto term = context::make_plan(pt, find(pt, "stress"), opts);

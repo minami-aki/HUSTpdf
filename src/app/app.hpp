@@ -141,6 +141,7 @@ private:
         std::string raw;  // bản dịch thô (còn placeholder)
         std::string cache_key;  // rỗng: không lưu cache
         std::string source;     // văn bản gửi đi dịch (lưu kèm cache để tra cứu)
+        std::string original;   // câu gốc trước khi thay placeholder (hậu kiểm mất số)
     };
 
     std::unique_ptr<storage::Store> store_;  // nullptr nếu không mở được cơ sở dữ liệu

@@ -16,6 +16,7 @@
 #include <nfd.h>
 
 #include "context/translation_plan.hpp"
+#include "text/normalize.hpp"
 #include "pdf/context.hpp"
 #include "pdf/text_page.hpp"
 #include "terminology/classifier.hpp"
@@ -290,10 +291,13 @@ void App::finish_translation(bool from_model) {
     for (const auto& m : r.missing) issues.push_back(std::format("Bản dịch làm mất: {}", m));
     for (const auto& d : r.duplicated) issues.push_back(std::format("Bản dịch lặp lại: {}", d));
     for (const auto& u : r.unknown) issues.push_back(std::format("Ký hiệu lạ trong bản dịch: {}", u));
+    if (!active_.original.empty()) {
+        for (const auto& n : text::missing_numbers(active_.original, r.text)) issues.push_back(std::format("Bản dịch làm mất số: {}", n));
+    }
     for (const auto& t : terminology::check_terms(r.text, active_.terms)) {
         issues.push_back(std::format("Chưa dùng đúng thuật ngữ: {} → {}", t.term_en, t.target()));
     }
-    popup_.set_text(trim_copy(r.text));
+    popup_.set_text(text::match_initial_case(trim_copy(r.text), active_.source));
     if (!issues.empty()) log::info("Hậu kiểm: {} vấn đề", issues.size());
     // Chỉ lưu cache bản dịch "sạch": có vấn đề thì lần sau dịch lại (lấy mẫu ngẫu nhiên, có thể tốt hơn).
     if (from_model && issues.empty() && store_ && !active_.cache_key.empty() && !trim_copy(active_.raw).empty()) {
@@ -392,6 +396,7 @@ void App::request_translation(bool force_model, bool bypass_cache) {
             for (const auto& t : plan->terms) hints.push_back({t.term_en, t.target()});
             active_.placeholders = plan->placeholders;
             active_.terms = plan->terms;
+            active_.original = plan->source;
             start_translation(std::move(plan->request), plan->truncated, scope, std::move(hints), bypass_cache);
             return;
         }
@@ -406,6 +411,7 @@ void App::request_translation(bool force_model, bool bypass_cache) {
     translate::TranslateRequest request;
     request.text = std::move(text);
     request.domains = effective_domains();
+    active_.original = request.text;
     start_translation(std::move(request), truncated, ui::TranslationPopup::Scope::None, {}, bypass_cache);
 }
 

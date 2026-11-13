@@ -33,7 +33,11 @@ struct PlanOptions {
     std::size_t max_context_chars = 600;  // ~150 token
     std::size_t max_chars = 2000;         // độ dài tối đa của đoạn cần dịch
     std::size_t max_term_words = 4;
-    bool protect = true;                  // thay công thức/mã/đơn vị bằng placeholder
+    bool protect = true;                  // thay công thức/mã/URL bằng placeholder
+    // Đại lượng (số + đơn vị, %) cũng thành placeholder? Mặc định không: mô hình 1.8B chép nguyên
+    // đại lượng rất đúng nhưng hay làm rơi token placeholder (đo trong docs/DECISIONS.md, M6).
+    // Hậu kiểm "mất số" (text::missing_numbers) thay cho bảo vệ bằng placeholder.
+    bool protect_quantities = false;
     const terminology::GlossaryIndex* glossary = nullptr;
     std::vector<translate::DomainScore> domains;
 };
