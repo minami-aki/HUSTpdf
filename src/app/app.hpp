@@ -51,6 +51,7 @@ struct AppOptions {
     int threads = 0;                                      // luồng suy luận, 0 = mặc định
     bool add_generation_prompt = false;                   // xem translate::ModelConfig
     bool repack_weights = false;                          // xem translate::ModelConfig
+    bool include_context = false;                         // thêm câu xung quanh vào prompt (thử nghiệm)
 };
 
 class App {
@@ -108,6 +109,7 @@ private:
     ui::TranslationPopup popup_;
 
     bool auto_translate_ = true;
+    bool whole_sentence_ = true;  // bôi đen nửa câu -> dịch cả câu (đổi được trong popup)
     std::uint64_t seen_selection_version_ = 0;
     bool seen_dragging_ = false;
     double translate_at_ = 0;  // thời điểm gửi yêu cầu dịch sau debounce (0 = không có)

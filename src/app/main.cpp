@@ -2,7 +2,7 @@
 //
 // Tham số dòng lệnh:
 //   pdfread [file.pdf] [--page N] [--zoom 150 | --fit-page] [--timing] [--verbose]
-//           [--model file.gguf] [--threads N] [--gen-prompt] [--repack]
+//           [--model file.gguf] [--threads N] [--gen-prompt] [--repack] [--context]
 //   pdfread file.pdf --snapshot out.png   (kiểm thử: chờ render xong, chụp cửa sổ, thoát)
 
 #include <charconv>
@@ -156,6 +156,8 @@ int run(const std::vector<std::string>& args) {
             options.add_generation_prompt = true;
         } else if (a == "--repack") {
             options.repack_weights = true;
+        } else if (a == "--context") {
+            options.include_context = true;
         } else if (a == "--select") {
             const std::string& spec = next();
             options.select = parse_select(spec);

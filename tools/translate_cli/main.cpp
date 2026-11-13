@@ -31,6 +31,7 @@ int main(int argc, char** argv) {
     translate::ModelConfig config;
     translate::TranslateRequest base;
     std::vector<std::string> inputs;
+    bool raw = false;  // --raw: gửi nguyên văn làm tin nhắn user (thử mẫu prompt khác); "\n" trong tham số = xuống dòng
     for (int i = 1; i < argc; ++i) {
         const std::string a = argv[i];
         auto next = [&]() -> std::string { return i + 1 < argc ? argv[++i] : std::string(); };
@@ -46,6 +47,7 @@ int main(int argc, char** argv) {
             const auto eq = t.find('=');
             if (eq != std::string::npos) base.terms.push_back({t.substr(0, eq), t.substr(eq + 1), false});
         } else if (a == "--verbose") log::set_level(log::Level::Debug);
+        else if (a == "--raw") raw = true;
         else inputs.push_back(a);
     }
     if (config.model_path.empty()) {
@@ -64,6 +66,11 @@ int main(int argc, char** argv) {
         for (const std::string& text : inputs) {
             translate::TranslateRequest request = base;
             request.text = text;
+            if (raw) {
+                std::string msg = text;
+                for (std::size_t p = 0; (p = msg.find("\\n", p)) != std::string::npos;) msg.replace(p, 2, "\n");
+                request.raw_user_message = msg;
+            }
             translate::TranslationStats stats;
             translator.translate(
                 request, [](std::string_view piece) { std::fwrite(piece.data(), 1, piece.size(), stdout); std::fflush(stdout); },

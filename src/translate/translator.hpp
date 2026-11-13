@@ -27,6 +27,9 @@ struct TranslateRequest {
     std::string context;               // 1–2 câu xung quanh (có thể rỗng)
     std::vector<GlossaryEntry> terms;  // chỉ các thuật ngữ xuất hiện trong text
     std::vector<DomainScore> domains;  // lĩnh vực của tài liệu/mục
+    // Chỉ dùng cho công cụ thử nghiệm: nếu khác rỗng, gửi nguyên văn làm tin nhắn user
+    // thay cho mẫu prompt dựng từ các trường trên.
+    std::string raw_user_message;
 };
 
 struct TranslationStats {

@@ -63,6 +63,18 @@ public:
     }
     // Vùng nhìn (không gồm thanh cuộn), tọa độ màn hình.
     [[nodiscard]] std::pair<ImVec2, ImVec2> viewport_rect() const noexcept { return viewport_; }
+
+    // Vùng chọn nằm gọn trong một trang và text của trang đó đã có.
+    struct PageSelection {
+        int page = -1;
+        pdf::TextPagePtr text;
+        std::vector<pdf::Quad> quads;
+    };
+    [[nodiscard]] std::optional<PageSelection> single_page_selection() const;
+
+    // Tô nhạt phần đang được dịch (khi mở rộng vùng chọn ra trọn câu). Tọa độ point của trang.
+    void set_translated_highlight(int page, std::vector<text::Box> rects);
+    void clear_translated_highlight() { translated_rects_.clear(); }
     void clear_selection() { selection_.clear(); }
     // Đặt vùng chọn bằng tọa độ trang (dùng cho chế độ kiểm thử --select).
     void select(const SelectionPoint& a, const SelectionPoint& b, pdf::SelectUnit unit);
@@ -122,6 +134,8 @@ private:
     Selection selection_;
     std::optional<std::pair<ImVec2, ImVec2>> selection_rect_;
     std::pair<ImVec2, ImVec2> viewport_;
+    int translated_page_ = -1;
+    std::vector<text::Box> translated_rects_;
 };
 
 }  // namespace pdfread::ui

@@ -1,5 +1,7 @@
 #include "pdf/text_page.hpp"
 
+#include <algorithm>
+#include <cmath>
 #include <format>
 
 #include "pdf/context.hpp"
@@ -30,6 +32,30 @@ struct PageStats {
     const fz_stext_char* first = nullptr;
     const fz_stext_char* last = nullptr;
 };
+
+text::Box to_box(const PageBox& box, const fz_rect& r) {
+    return {r.x0 - box.x0, r.y0 - box.y0, r.x1 - box.x0, r.y1 - box.y0};
+}
+
+// fz_stext_page -> khối/dòng/ký tự thô cho tầng 2 (tọa độ theo khung trang).
+std::vector<text::RawBlock> raw_blocks(fz_stext_page* page, const PageBox& box) {
+    std::vector<text::RawBlock> out;
+    for (fz_stext_block* b = page->first_block; b != nullptr; b = b->next) {
+        if (b->type != FZ_STEXT_BLOCK_TEXT) continue;
+        text::RawBlock block;
+        block.box = to_box(box, b->bbox);
+        for (fz_stext_line* l = b->u.t.first_line; l != nullptr; l = l->next) {
+            text::RawLine line;
+            line.box = to_box(box, l->bbox);
+            for (fz_stext_char* c = l->first_char; c != nullptr; c = c->next) {
+                line.chars.push_back({static_cast<char32_t>(c->c), to_box(box, fz_rect_from_quad(c->quad))});
+            }
+            if (!line.chars.empty()) block.lines.push_back(std::move(line));
+        }
+        if (!block.lines.empty()) out.push_back(std::move(block));
+    }
+    return out;
+}
 
 PageStats scan(fz_stext_page* page) {
     PageStats s;
@@ -76,14 +102,60 @@ TextPagePtr TextPage::build(const DisplayList& list, const PageBox& box) {
         start = from_fz(box, inside_char(stats.first, 0.25f));
         end = from_fz(box, inside_char(stats.last, 0.75f));
     }
-    return TextPagePtr(new TextPage(page, box, stats.chars, start, end));
+    text::PageText page_text;
+    try {
+        ScopedTimer t2("page text");
+        page_text = text::build_page_text(raw_blocks(page, box));
+    } catch (...) {
+        fz_drop_stext_page(c, page);
+        throw;
+    }
+    return TextPagePtr(new TextPage(page, box, stats.chars, start, end, std::move(page_text)));
 }
 
 TextPage::~TextPage() {
     if (page_ != nullptr) fz_drop_stext_page(thread_ctx(), stext(page_));
 }
 
+PointF TextPage::snap_to_text(PointF p) const {
+    const fz_point q = to_fz(box_, p);
+    const fz_stext_char* best = nullptr;
+    float best_d2 = 0;
+    for (fz_stext_block* b = stext(page_)->first_block; b != nullptr; b = b->next) {
+        if (b->type != FZ_STEXT_BLOCK_TEXT) continue;
+        for (fz_stext_line* l = b->u.t.first_line; l != nullptr; l = l->next) {
+            for (fz_stext_char* ch = l->first_char; ch != nullptr; ch = ch->next) {
+                const fz_rect r = fz_rect_from_quad(ch->quad);
+                // Khoảng cách dọc (tới đường giữa dòng) nặng gấp 10 lần khoảng cách ngang (tới
+                // mép ký tự): ưu tiên dòng gần con trỏ nhất theo chiều dọc, rồi mới tới ký tự
+                // gần nhất trong dòng (cột gần hơn). Không đo tới mép khung theo chiều dọc vì khung
+                // ký tự của MuPDF (theo ascender/descender của font) có thể chồng lên dòng kề;
+                // không dùng khoảng cách Euclid thuần vì nó kéo điểm bên phải một dòng ngắn sang
+                // dòng dài hơn ở trên/dưới.
+                const float dx = std::max({r.x0 - q.x, 0.0f, q.x - r.x1});
+                const float dy = 10.0f * std::abs(q.y - (r.y0 + r.y1) / 2);
+                const float d2 = dx * dx + dy * dy;
+                if (best == nullptr || d2 < best_d2) {
+                    best = ch;
+                    best_d2 = d2;
+                }
+            }
+        }
+    }
+    if (best == nullptr) return p;
+    // Kẹp vào trong ký tự, chừa 20% mỗi bên: MuPDF đặt biên vùng chọn ở cạnh ký tự gần
+    // điểm hơn, nên điểm phía phải dòng vẫn lấy trọn ký tự cuối.
+    const fz_rect r = fz_rect_from_quad(best->quad);
+    const float ix = (r.x1 - r.x0) * 0.2f;
+    const float iy = (r.y1 - r.y0) * 0.2f;
+    const fz_point s{std::clamp(q.x, r.x0 + ix, std::max(r.x0 + ix, r.x1 - ix)),
+                     std::clamp(q.y, r.y0 + iy, std::max(r.y0 + iy, r.y1 - iy))};
+    return from_fz(box_, s);
+}
+
 void TextPage::snap(PointF& a, PointF& b, SelectUnit unit) const {
+    a = snap_to_text(a);
+    b = snap_to_text(b);
     if (unit == SelectUnit::Chars) return;
     fz_context* c = require_ctx();
     fz_point fa = to_fz(box_, a);
@@ -102,6 +174,8 @@ void TextPage::snap(PointF& a, PointF& b, SelectUnit unit) const {
 
 std::vector<Quad> TextPage::highlight(PointF a, PointF b) const {
     fz_context* c = require_ctx();
+    a = snap_to_text(a);
+    b = snap_to_text(b);
     std::vector<fz_quad> buf(256);
     int n = 0;
     for (;;) {
@@ -128,6 +202,8 @@ std::vector<Quad> TextPage::highlight(PointF a, PointF b) const {
 
 std::string TextPage::copy(PointF a, PointF b) const {
     fz_context* c = require_ctx();
+    a = snap_to_text(a);
+    b = snap_to_text(b);
     char* text = nullptr;
     fz_var(text);
     fz_try(c) { text = fz_copy_selection(c, stext(page_), to_fz(box_, a), to_fz(box_, b), 0); }

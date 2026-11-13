@@ -70,6 +70,17 @@ bool contains(const std::string& s, const std::string& part) { return s.find(par
 
 }  // namespace
 
+TEST_CASE("TextPage builds cleaned page text with sentences", "[pdf][text]") {
+    Fixture f;
+    const text::PageText& pt = f.pages[0]->page_text();
+    std::vector<std::string> sents;
+    for (const auto& s : pt.sentences()) sents.push_back(pt.utf8(s.span));
+    INFO(pt.utf8({0, pt.text().size()}));
+    REQUIRE(sents.size() == 2);
+    CHECK(sents[0] == "The quick brown fox jumps over the lazy dog.");
+    CHECK(sents[1] == "Proportional-integral control uses international standards.");
+}
+
 TEST_CASE("TextPage copies whole-page text with dehyphenation", "[pdf][text]") {
     Fixture f;
     const pdf::TextPage& t = *f.pages[0];
@@ -186,6 +197,19 @@ TEST_CASE("Whole-page selection on a two-column page starts at the left column",
     CHECK(contains(all, "Right column header"));
     CHECK(all.ends_with("right line last"));
 
+    // Tầng 2 cũng đọc hết cột trái rồi mới sang cột phải.
+    const text::PageText& pt = t.page_text();
+    std::vector<std::string> paras;
+    for (const auto& p : pt.paragraphs()) paras.push_back(pt.utf8(p.span));
+    REQUIRE_FALSE(paras.empty());
+    const std::string joined = [&] {
+        std::string s;
+        for (const auto& p : paras) s += p + "|";
+        return s;
+    }();
+    INFO(joined);
+    CHECK(joined.find("left line two") < joined.find("Right column header"));
+
     // Kéo từ trang 1 sang cột trái trang hai cột (dòng "left line one", y đỉnh = 82).
     auto lookup = [&](int page) -> pdf::TextPagePtr { return f.pages[static_cast<std::size_t>(page)]; };
     ui::Selection s;
@@ -196,6 +220,23 @@ TEST_CASE("Whole-page selection on a two-column page starts at the left column",
     CHECK(contains(text, "Second page second line"));
     CHECK(contains(text, "Left column header\nleft"));
     CHECK_FALSE(contains(text, "Right column"));
+}
+
+TEST_CASE("Selection ending between two lines stays in the same column", "[pdf][text]") {
+    Fixture f;
+    const pdf::TextPage& t = *f.pages[3];
+    // Dòng "left line one" có đường cơ sở y = 82, "left line two" y = 102 (tính từ đỉnh);
+    // y = 89 nằm trong khe giữa hai dòng, cột phải có hai dòng cùng độ cao.
+    const std::string text = t.copy({56, 58}, {100, 89});
+    INFO(text);
+    CHECK(text.starts_with("Left column header"));
+    CHECK_FALSE(contains(text, "Right column"));
+    CHECK_FALSE(contains(text, "right line"));
+
+    // Điểm bên phải cuối dòng (dòng kết thúc ở x ~ 126, cột phải bắt đầu ở x = 310) vẫn lấy
+    // trọn ký tự cuối của dòng.
+    // (Dòng tiêu đề phía trên dài hơn: khoảng cách Euclid thuần sẽ dời điểm lên tiêu đề.)
+    CHECK(t.copy({56, 79}, {200, 79}) == "left line one");
 }
 
 TEST_CASE("Selection waits for missing page text and word-snaps on double click", "[ui][selection]") {

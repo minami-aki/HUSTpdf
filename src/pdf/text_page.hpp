@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "pdf/document.hpp"
+#include "text/page_text.hpp"
 
 namespace pdfread::pdf {
 
@@ -50,9 +51,18 @@ public:
 
     [[nodiscard]] int char_count() const noexcept { return char_count_; }
 
+    // Text đã làm sạch, chia đoạn, tách câu (tầng 2).
+    [[nodiscard]] const text::PageText& page_text() const noexcept { return page_text_; }
+
+    // Dời điểm vào trong ký tự gần nhất (khoảng cách 2D), giữ phía gần điểm gốc. Mọi điểm
+    // đưa cho MuPDF đều qua bước này: với điểm nằm ngoài mọi dòng (khe giữa hai dòng, lề),
+    // MuPDF chọn dòng gần nhất theo chiều dọc và khi hòa lấy dòng sau — ở trang hai cột,
+    // dòng cùng độ cao của cột phải luôn thắng dù chuột đang ở cột trái.
+    [[nodiscard]] PointF snap_to_text(PointF p) const;
+
 private:
-    TextPage(void* page, const PageBox& box, int char_count, PointF start, PointF end) noexcept
-        : page_(page), box_(box), char_count_(char_count), start_(start), end_(end) {}
+    TextPage(void* page, const PageBox& box, int char_count, PointF start, PointF end, text::PageText page_text) noexcept
+        : page_(page), box_(box), char_count_(char_count), start_(start), end_(end), page_text_(std::move(page_text)) {}
 
     // fz_stext_page* (MuPDF khai báo là typedef của struct ẩn danh nên không
     // forward-declare được; ép kiểu trong text_page.cpp).
@@ -61,6 +71,7 @@ private:
     int char_count_;
     PointF start_;
     PointF end_;
+    text::PageText page_text_;
 };
 
 using TextPagePtr = std::shared_ptr<const TextPage>;

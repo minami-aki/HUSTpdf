@@ -20,6 +20,7 @@ std::string terminology_block(const TranslateRequest& r) {
 }  // namespace
 
 std::string build_user_prompt(const TranslateRequest& r) {
+    if (!r.raw_user_message.empty()) return r.raw_user_message;
     const bool has_terms = !r.terms.empty();
     const bool has_context = !r.context.empty();
     std::string p;

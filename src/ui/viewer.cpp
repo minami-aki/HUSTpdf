@@ -20,6 +20,7 @@ constexpr ImU32 kBackground = IM_COL32(0xD5, 0xD8, 0xDC, 0xFF);
 constexpr ImU32 kPageColor = IM_COL32(0xFF, 0xFF, 0xFF, 0xFF);
 constexpr ImU32 kShadowColor = IM_COL32(0x00, 0x00, 0x00, 0x30);
 constexpr ImU32 kSelectionColor = IM_COL32(0x2F, 0x7D, 0xF6, 0x55);
+constexpr ImU32 kTranslatedColor = IM_COL32(0xFF, 0xC1, 0x07, 0x40);  // cả câu đang được dịch
 
 constexpr std::size_t kTextCacheCapacity = 64;  // số trang giữ text
 constexpr int kMaxSelectionTextPages = 50;      // trích text tối đa cho vùng chọn nhiều trang
@@ -38,6 +39,8 @@ void Viewer::set_document(std::shared_ptr<pdf::Document> doc) {
     textures_.clear();
     texts_.clear();
     selection_.clear();
+    translated_rects_.clear();
+    translated_page_ = -1;
     render_.set_document(doc_);
     text_service_.set_document(doc_);
     layout_ready_ = false;
@@ -88,6 +91,20 @@ void Viewer::zoom_at(ImVec2 anchor, double zoom) {
 void Viewer::go_to_page(int index) {
     if (!doc_) return;
     pending_page_ = std::clamp(index, 0, doc_->page_count() - 1);
+}
+
+std::optional<Viewer::PageSelection> Viewer::single_page_selection() const {
+    const auto [first, last] = selection_.page_range();
+    if (first < 0 || first != last || !selection_.active()) return std::nullopt;
+    auto it = texts_.find(first);
+    const std::vector<pdf::Quad>* quads = selection_.quads(first);
+    if (it == texts_.end() || quads == nullptr) return std::nullopt;
+    return PageSelection{first, it->second.text, *quads};
+}
+
+void Viewer::set_translated_highlight(int page, std::vector<text::Box> rects) {
+    translated_page_ = page;
+    translated_rects_ = std::move(rects);
 }
 
 void Viewer::select(const SelectionPoint& a, const SelectionPoint& b, pdf::SelectUnit unit) {
@@ -505,24 +522,35 @@ void Viewer::draw_page(ImDrawList* dl, int page, const ImVec2& origin, float fb_
 }
 
 void Viewer::draw_selection(ImDrawList* dl, int page, const ImVec2& page_origin) {
+    const float upp = static_cast<float>(layout_.units_per_pt());
+    // Khung bao trên màn hình của vùng chọn + phần đang dịch (để đặt popup không che chúng),
+    // chỉ tính phần nằm trong vùng nhìn.
+    auto extend_rect = [&](const ImVec2& p) {
+        const ImVec2 c(std::clamp(p.x, viewport_.first.x, viewport_.second.x),
+                       std::clamp(p.y, viewport_.first.y, viewport_.second.y));
+        if (!selection_rect_) {
+            selection_rect_ = std::make_pair(c, c);
+        } else {
+            selection_rect_->first = ImVec2(std::min(selection_rect_->first.x, c.x), std::min(selection_rect_->first.y, c.y));
+            selection_rect_->second = ImVec2(std::max(selection_rect_->second.x, c.x), std::max(selection_rect_->second.y, c.y));
+        }
+    };
     const std::vector<pdf::Quad>* quads = selection_.quads(page);
     if (quads == nullptr) return;
-    const float upp = static_cast<float>(layout_.units_per_pt());
+    if (page == translated_page_) {
+        for (const text::Box& r : translated_rects_) {
+            const ImVec2 a(page_origin.x + r.x0 * upp, page_origin.y + r.y0 * upp);
+            const ImVec2 b(page_origin.x + r.x1 * upp, page_origin.y + r.y1 * upp);
+            dl->AddRectFilled(a, b, kTranslatedColor);
+            extend_rect(a);
+            extend_rect(b);
+        }
+    }
     auto at = [&](const pdf::PointF& p) { return ImVec2(page_origin.x + p.x * upp, page_origin.y + p.y * upp); };
     for (const pdf::Quad& q : *quads) {
         const ImVec2 pts[4] = {at(q.ul), at(q.ur), at(q.lr), at(q.ll)};
         dl->AddQuadFilled(pts[0], pts[1], pts[2], pts[3], kSelectionColor);
-        // Khung bao trên màn hình (để đặt popup dịch), chỉ phần nằm trong vùng nhìn.
-        for (const ImVec2& p : pts) {
-            const ImVec2 c(std::clamp(p.x, viewport_.first.x, viewport_.second.x),
-                           std::clamp(p.y, viewport_.first.y, viewport_.second.y));
-            if (!selection_rect_) {
-                selection_rect_ = std::make_pair(c, c);
-            } else {
-                selection_rect_->first = ImVec2(std::min(selection_rect_->first.x, c.x), std::min(selection_rect_->first.y, c.y));
-                selection_rect_->second = ImVec2(std::max(selection_rect_->second.x, c.x), std::max(selection_rect_->second.y, c.y));
-            }
-        }
+        for (const ImVec2& p : pts) extend_rect(p);
     }
 }
 

@@ -52,6 +52,32 @@ Bổ sung cho [CLAUDE.md](../CLAUDE.md). Mỗi mục ghi ngày chốt; muốn đ
 - **Debounce** 250 ms sau khi thả chuột; đang kéo thì ẩn popup cũ và hủy yêu cầu. Giới hạn 2000 ký tự mỗi lần dịch; tạm nối các dòng bằng dấu cách (M4 sẽ làm sạch, tách câu).
 - Chất lượng ban đầu (chưa có lĩnh vực/glossary): câu thường dịch trôi nhưng hay diễn giải dài; thuật ngữ sai theo lĩnh vực ("stress" → "căng thẳng", "kernel" → "hạt nhân", "data hazard" → "vấn đề") — đúng phần việc của M4/M5.
 
+## 2026-11-13 — M4: tầng 2 và ngữ cảnh (người dùng chốt: tắt ngữ cảnh mặc định)
+
+**Đo với HY-MT1.5-1.8B Q4_K_M** (`pdfread-translate --context/--raw`, 4 cặp câu, mỗi cấu hình chạy 2 lần):
+- Mẫu ngữ cảnh chính thức (`{context}\n参考上面的信息，…`) hỏng 2/4 câu: dịch luôn câu ngữ cảnh, hoặc **chỉ** dịch câu ngữ cảnh và bỏ mất câu cần dịch. Hai cách viết khác (lệnh tiếng Anh; bọc thẻ `<context>`/`<source>`) còn tệ hơn.
+- Dịch một cụm ngắn với cả câu làm ngữ cảnh: 3/5 lần mô hình dịch cả câu thay vì cụm.
+- Mẫu "Formatted Translation" (`<sn>…</sn>`, để đánh dấu phần tương ứng khi chọn nửa câu) giữ thẻ 3/4 câu nhưng chất lượng giảm rõ: lẫn tiếng Anh ("For một…"), một câu không dịch, một câu sai ngược nghĩa ("below" → "vượt quá"); token đầu ~1,2 s.
+
+**Quyết định:**
+- Mặc định **không** đưa câu xung quanh vào prompt. Code ghép 1–2 câu trước/sau trong cùng đoạn (giới hạn 600 ký tự) đã viết (`context::surrounding_context`), bật bằng `--context`; M6 đo lại bằng `tools/eval` (có thể thử Q8_0 / mô hình lớn hơn).
+- Bôi đen **nửa câu** → dịch **cả câu** bằng mẫu thường; trên trang tô vàng nhạt phần được dịch, phần bôi đen vẫn màu xanh; không dùng `<sn>`. Popup có nút "cả câu / chỉ phần chọn".
+- **Một từ / cụm ≤ 4 từ** không có dấu kết câu → dịch đúng phần chọn (M5: tra glossary trước).
+- Bôi đen lố sang câu bên cạnh < 4 ký tự (ví dụ "The" của câu sau) → bỏ qua câu đó.
+- Thực tế: dịch trọn câu đã cải thiện thuật ngữ (ví dụ "von Mises stress" trong câu → "ứng suất von Mises", trong khi chữ "Stress" đứng một mình → "Căng thẳng").
+
+**Tầng 2 (`src/text/`, thuần C++, không phụ thuộc MuPDF):**
+- Thứ tự đọc: XY-cut ưu tiên khe dọc (cột) chạy suốt chiều cao nhóm; khi cắt ngang thì gộp các dải liền nhau chỉ có khối hẹp (< 60% bề rộng) để không đọc xen kẽ hai cột tại chỗ khoảng cách đoạn thẳng hàng; khối rộng (tiêu đề, chú thích hình) tách riêng.
+- Đoạn: tách khối khi khoảng cách dọc > 0,6 chiều cao dòng, hoặc dòng trước kết thúc câu và ngắn (< 85% bề rộng khối), hoặc dòng sau thụt đầu dòng; nối đoạn qua khối/cột khi đoạn trước không kết thúc câu và đoạn sau bắt đầu bằng chữ thường.
+- Làm sạch: tách ký tự ghép (ﬁ ﬂ ﬃ…), khoảng trắng Unicode → ' ', bỏ ký tự vô hình; gạch nối cuối dòng theo cùng quy tắc như M2 (soft hyphen luôn bỏ).
+- Tách câu theo luật + danh sách viết tắt; cố ý không coi "etc", "ms", "min", "max", "p", "app", "ex", "est" là viết tắt vì hay đứng cuối câu trong tài liệu kỹ thuật.
+- Dựng trên luồng text nền ngay sau stext; đo 0,2–1,2 ms/trang trên tài liệu mẫu.
+- Hoãn sang M5: phát hiện vùng không dịch (công thức, mã, đơn vị) và đánh dấu thuật ngữ glossary.
+
+**Bôi đen (sửa thêm):** mọi điểm đưa cho MuPDF được dời vào ký tự gần nhất, đo khoảng cách dọc tới đường giữa dòng với trọng số 10 so với ngang. Lý do: với điểm ở khe giữa hai dòng, MuPDF chọn dòng gần nhất theo chiều dọc và khi hòa lấy dòng sau → ở trang hai cột luôn nhảy sang cột phải (lỗi thấy khi chạy thử). Euclid thuần thì kéo điểm bên phải dòng ngắn lên dòng dài phía trên; đo tới mép khung thì sai vì khung ký tự font Times chồng lên dòng kề.
+
+**Khác:** giới hạn token sinh nâng lên 3× số token prompt + 32 (2× làm cụt bản dịch dài dòng của mô hình).
+
 ## Thông tin tham chiếu
 
 - vcpkg baseline: `177e8175121536d414f405ed8b3099b325a42638` (2026-11-11).

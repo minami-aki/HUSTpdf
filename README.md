@@ -12,7 +12,7 @@ Trình đọc PDF khoa học – kỹ thuật, dịch Anh → Việt tức thờ
 | M1 | Cửa sổ, mở PDF, render, cuộn liên tục, zoom | xong |
 | M2 | Bôi đen, tô sáng, lấy text | xong |
 | M3 | llama.cpp + HY-MT1.5, popup dịch streaming | xong |
-| M4 | Tầng 2: làm sạch, tách câu, ngữ cảnh | chưa |
+| M4 | Tầng 2: làm sạch, tách câu, ngữ cảnh | xong (ngữ cảnh viết sẵn nhưng tắt mặc định, xem DECISIONS) |
 | M5 | Tầng 1: lĩnh vực, glossary, placeholder, hậu kiểm | chưa |
 | M6 | Cache SQLite, tải mô hình, đánh giá, CI | chưa |
 
@@ -63,8 +63,9 @@ Không đóng gói kèm. Tải `HY-MT1.5-1.8B-Q4_K_M.gguf` (1,13 GB) từ [tence
 | Shift + nhấn | Mở rộng vùng chọn tới điểm nhấn |
 | Ctrl+C, Esc | Sao chép vùng chọn, bỏ chọn |
 | (thả chuột) / Ctrl+T | Dịch vùng chọn: tự động sau 250 ms nếu bật "Dịch tự động", hoặc thủ công |
+| | Bôi đen một phần câu: dịch cả câu (tô vàng nhạt trên trang); đổi sang "chỉ phần chọn" ngay trong popup. Một từ / cụm ≤ 4 từ: dịch đúng phần chọn |
 
-Tham số mô hình: `--threads N` số luồng suy luận (mặc định = số nhân vật lý, tối đa 8); `--repack` sắp xếp lại trọng số cho AVX2/AVX-512 (prompt dài xử lý nhanh hơn nhưng tốn thêm ~700 MB RAM); `--gen-prompt` kết thúc prompt bằng `<｜hy_Assistant｜>` thay vì như ví dụ chính thức.
+Tham số mô hình: `--threads N` số luồng suy luận (mặc định = số nhân vật lý, tối đa 8); `--repack` sắp xếp lại trọng số cho AVX2/AVX-512 (prompt dài xử lý nhanh hơn nhưng tốn thêm ~700 MB RAM); `--gen-prompt` kết thúc prompt bằng `<｜hy_Assistant｜>` thay vì như ví dụ chính thức; `--context` (thử nghiệm) thêm 1 câu trước/sau vào prompt bằng mẫu ngữ cảnh — mặc định tắt vì làm hỏng bản dịch với mô hình 1.8B Q4.
 
 `--timing` ghi thời gian mở file, dựng display list, render từng tile, nạp mô hình, token đầu tiên, token/s ra log (bản Debug có console).
 

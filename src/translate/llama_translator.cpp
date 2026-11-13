@@ -158,8 +158,9 @@ bool LlamaTranslator::translate(const TranslateRequest& request, const std::func
     }
     st.prompt_ms = total.elapsed_ms();
 
-    // Bản dịch tiếng Việt thường dài hơn bản gốc tính theo token; giới hạn để không chạy vô tận.
-    const int max_new = std::min(n_ctx - n_prompt - 1, std::clamp(2 * n_prompt + 16, 32, 1024));
+    // Bản dịch tiếng Việt thường dài hơn bản gốc tính theo token, và mô hình hay diễn giải
+    // thêm; giới hạn rộng (3x) chỉ để chặn trường hợp sinh lặp vô tận.
+    const int max_new = std::min(n_ctx - n_prompt - 1, std::clamp(3 * n_prompt + 32, 64, 1024));
     Utf8Stream utf8;
     bool started = false;  // đã gặp ký tự khác khoảng trắng
     for (int i = 0; i < max_new; ++i) {

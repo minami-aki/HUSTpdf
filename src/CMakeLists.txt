@@ -17,6 +17,18 @@ target_link_libraries(pdfread_util
     PRIVATE pdfread_options
 )
 
+# --- text: tầng 2 — làm sạch, thứ tự đọc, đoạn, câu (không phụ thuộc MuPDF) --
+add_library(pdfread_text STATIC
+    text/normalize.cpp
+    text/page_text.cpp
+    text/reading_order.cpp
+    text/sentence_splitter.cpp
+)
+target_link_libraries(pdfread_text
+    PUBLIC pdfread_util
+    PRIVATE pdfread_options
+)
+
 # --- pdf: lớp bọc MuPDF -----------------------------------------------------
 add_library(pdfread_pdf STATIC
     pdf/context.cpp
@@ -26,7 +38,7 @@ add_library(pdfread_pdf STATIC
     pdf/text_service.cpp
 )
 target_link_libraries(pdfread_pdf
-    PUBLIC pdfread_util
+    PUBLIC pdfread_util pdfread_text
     PRIVATE pdfread_options unofficial::libmupdf::libmupdf
 )
 
@@ -41,6 +53,15 @@ target_link_libraries(pdfread_translate
     PRIVATE pdfread_options llama ggml
 )
 
+# --- context: tầng 3 — vùng chọn -> kế hoạch dịch ----------------------------
+add_library(pdfread_context STATIC
+    context/translation_plan.cpp
+)
+target_link_libraries(pdfread_context
+    PUBLIC pdfread_text pdfread_translate
+    PRIVATE pdfread_options
+)
+
 # --- ui: viewer, layout, texture cache, font, popup dịch --------------------
 add_library(pdfread_ui STATIC
     ui/fonts.cpp
@@ -51,7 +72,7 @@ add_library(pdfread_ui STATIC
     ui/viewer.cpp
 )
 target_link_libraries(pdfread_ui
-    PUBLIC pdfread_pdf pdfread_translate imgui::imgui glfw OpenGL::GL
+    PUBLIC pdfread_pdf pdfread_translate pdfread_context imgui::imgui glfw OpenGL::GL
     PRIVATE pdfread_options
 )
 

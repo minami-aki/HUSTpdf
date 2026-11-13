@@ -15,6 +15,7 @@
 #include <imgui_impl_opengl3.h>
 #include <nfd.h>
 
+#include "context/translation_plan.hpp"
 #include "pdf/context.hpp"
 #include "translate/llama_translator.hpp"
 #include "ui/fonts.hpp"
@@ -199,6 +200,7 @@ void App::update_translation() {
         seen_dragging_ = dragging;
         translate_at_ = 0;
         if (!viewer_.has_selection() || dragging) {
+            viewer_.clear_translated_highlight();
             if (popup_.visible()) {
                 popup_.hide();
                 translation_.cancel();
@@ -215,8 +217,44 @@ void App::update_translation() {
 
 void App::request_translation() {
     if (!viewer_.has_selection()) return;
-    // Text bôi đen giữ nguyên xuống dòng của PDF; tạm nối thành một dòng (M4 sẽ làm
-    // sạch và tách câu đúng cách).
+    viewer_.clear_translated_highlight();
+
+    // Vùng chọn trong một trang: dùng text đã làm sạch/tách câu của trang (tầng 2) để
+    // lập kế hoạch dịch (mở rộng ra trọn câu, ngữ cảnh…).
+    if (const auto sel = viewer_.single_page_selection()) {
+        const text::PageText& page = sel->text->page_text();
+        // Ký tự thuộc vùng chọn: tâm khung ký tự nằm trong một tứ giác tô sáng.
+        const text::Span span = page.span_where([&](const text::Box& b) {
+            for (const pdf::Quad& q : sel->quads) {
+                const float x0 = std::min({q.ul.x, q.ur.x, q.ll.x, q.lr.x}) - 0.5f;
+                const float x1 = std::max({q.ul.x, q.ur.x, q.ll.x, q.lr.x}) + 0.5f;
+                const float y0 = std::min({q.ul.y, q.ur.y, q.ll.y, q.lr.y}) - 0.5f;
+                const float y1 = std::max({q.ul.y, q.ur.y, q.ll.y, q.lr.y}) + 0.5f;
+                if (b.cx() >= x0 && b.cx() <= x1 && b.cy() >= y0 && b.cy() <= y1) return true;
+            }
+            return false;
+        });
+        context::PlanOptions options;
+        options.expand_to_sentence = whole_sentence_;
+        options.include_context = options_.include_context;
+        options.max_chars = kMaxTranslateChars;
+        if (auto plan = context::make_plan(page, span, options)) {
+            if (plan->expanded) viewer_.set_translated_highlight(sel->page, page.line_rects(plan->translated));
+            using Scope = ui::TranslationPopup::Scope;
+            const Scope scope = plan->kind != context::SelectionKind::Partial ? Scope::None
+                                : whole_sentence_                               ? Scope::WholeSentence
+                                                                                : Scope::SelectionOnly;
+            log::debug("Dịch ({}): \"{}\"{}", plan->expanded ? "mở rộng ra trọn câu" : "đúng vùng chọn",
+                       plan->request.text,
+                       plan->request.context.empty() ? std::string() : " | ngữ cảnh: " + plan->request.context);
+            const bool truncated = plan->truncated;
+            const std::uint64_t id = translation_.submit(std::move(plan->request));
+            popup_.show(id, truncated, scope);
+            return;
+        }
+    }
+
+    // Vùng chọn qua nhiều trang (hoặc text trang chưa sẵn): dịch nguyên văn đã chọn.
     std::string text = viewer_.selection_text();
     std::replace(text.begin(), text.end(), '\n', ' ');
     const bool truncated = utf8_length(text) > kMaxTranslateChars;
@@ -232,8 +270,21 @@ void App::draw_translation_popup() {
     if (!popup_.visible()) return;
     const auto& anchor = viewer_.selection_screen_rect();
     if (!anchor) return;  // vùng chọn đang ở ngoài vùng nhìn
-    if (!popup_.draw(*anchor, viewer_.viewport_rect(), ui_scale_, translation_.model_state())) {
-        translation_.cancel();
+    using Action = ui::TranslationPopup::Action;
+    switch (popup_.draw(*anchor, viewer_.viewport_rect(), ui_scale_, translation_.model_state())) {
+        case Action::Close:
+            translation_.cancel();
+            viewer_.clear_translated_highlight();
+            break;
+        case Action::UseWholeSentence:
+            whole_sentence_ = true;
+            request_translation();
+            break;
+        case Action::UseSelectionOnly:
+            whole_sentence_ = false;
+            request_translation();
+            break;
+        case Action::None: break;
     }
 }
 

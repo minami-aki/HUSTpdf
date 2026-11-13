@@ -5,10 +5,11 @@
 
 namespace pdfread::ui {
 
-void TranslationPopup::show(std::uint64_t request_id, bool truncated) {
+void TranslationPopup::show(std::uint64_t request_id, bool truncated, Scope scope) {
     state_ = State::Waiting;
     request_id_ = request_id;
     truncated_ = truncated;
+    scope_ = scope;
     text_.clear();
     error_.clear();
     stats_ = {};
@@ -36,9 +37,11 @@ void TranslationPopup::on_event(const translate::TranslationEvent& e) {
     }
 }
 
-bool TranslationPopup::draw(const std::pair<ImVec2, ImVec2>& anchor, const std::pair<ImVec2, ImVec2>& bounds,
-                            float ui_scale, translate::ModelState model) {
-    if (state_ == State::Hidden) return true;
+TranslationPopup::Action TranslationPopup::draw(const std::pair<ImVec2, ImVec2>& anchor,
+                                               const std::pair<ImVec2, ImVec2>& bounds, float ui_scale,
+                                               translate::ModelState model) {
+    if (state_ == State::Hidden) return Action::None;
+    Action action = Action::None;
 
     const ImGuiStyle& style = ImGui::GetStyle();
     const float margin = 8.0f * ui_scale;
@@ -117,12 +120,33 @@ bool TranslationPopup::draw(const std::pair<ImVec2, ImVec2>& anchor, const std::
     }
     ImGui::PopTextWrapPos();
 
+    // Chọn phạm vi dịch khi vùng bôi đen chỉ là một phần câu.
+    if (scope_ != Scope::None) {
+        ImGui::Spacing();
+        ImGui::TextDisabled("Dịch:");
+        ImGui::SameLine();
+        // Nền ô radio mặc định (FrameBg) gần trùng nền popup: làm đậm lên cho thấy rõ.
+        ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.84f, 0.84f, 0.84f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(0.76f, 0.80f, 0.90f, 1.0f));
+        if (ImGui::RadioButton("cả câu", scope_ == Scope::WholeSentence) && scope_ != Scope::WholeSentence) {
+            action = Action::UseWholeSentence;
+        }
+        ImGui::SameLine();
+        if (ImGui::RadioButton("chỉ phần chọn", scope_ == Scope::SelectionOnly) && scope_ != Scope::SelectionOnly) {
+            action = Action::UseSelectionOnly;
+        }
+        ImGui::PopStyleColor(2);
+    }
+
     last_height_ = ImGui::GetWindowSize().y;
     ImGui::End();
     ImGui::PopStyleColor(2);
     ImGui::PopStyleVar(3);
-    if (!open) state_ = State::Hidden;
-    return open;
+    if (!open) {
+        state_ = State::Hidden;
+        action = Action::Close;
+    }
+    return action;
 }
 
 }  // namespace pdfread::ui
