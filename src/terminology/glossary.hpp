@@ -1,6 +1,10 @@
 #pragma once
-// Glossary: file CSV (cột term_en, term_vi, keep_english, notes, source) và chỉ mục tra
-// cứu nhiều tầng.
+// Glossary: file CSV (cột term_en, term_vi, keep_english, notes, source; tùy chọn aliases,
+// explanation) và chỉ mục tra cứu nhiều tầng.
+//
+// aliases: tên gọi khác, cách nhau bằng '|', dạng "tên=nghĩa" hoặc "tên" (viết tắt / ký hiệu
+// đồng vị: giữ nguyên khi dịch câu). explanation: giải thích & công thức (chỉ hiện khi tra
+// một thuật ngữ đơn lẻ, không đưa vào prompt).
 //
 // Thứ tự ưu tiên khi cùng một thuật ngữ có ở nhiều nơi (CLAUDE.md mục 5.1):
 //   glossary người dùng > glossary của tài liệu > lĩnh vực điểm cao nhất > các lĩnh vực khác.
@@ -31,6 +35,9 @@ struct GlossaryEntry {
     std::string domain_id;  // lĩnh vực con (rỗng với glossary người dùng / tài liệu)
     Layer layer = Layer::OtherDomain;
     int rank = 0;           // thứ tự trong cùng tầng (lĩnh vực điểm cao hơn -> nhỏ hơn)
+    std::vector<std::string> aliases;  // "tên=nghĩa" hoặc "tên"
+    std::string explanation;           // giải thích & công thức (Unicode)
+    std::string alias_of;              // khác rỗng: mục ảo do chỉ mục tạo từ tên gọi khác của thuật ngữ này
 
     // Bản dịch dùng trong prompt / hậu kiểm.
     [[nodiscard]] const std::string& target() const noexcept { return keep_english ? term_en : term_vi; }
@@ -49,6 +56,9 @@ struct GlossaryEntry {
 [[nodiscard]] std::vector<GlossaryEntry> parse_glossary_csv(std::string_view data);
 void save_glossary_csv(const std::filesystem::path& path, const std::vector<GlossaryEntry>& entries);
 
+// Tách một tên gọi khác "tên=nghĩa" -> (tên, nghĩa); không có '=' -> nghĩa rỗng.
+[[nodiscard]] std::pair<std::string, std::string> split_alias(const std::string& alias);
+
 // --- Chỉ mục -------------------------------------------------------------------
 
 struct TermMatch {
@@ -60,7 +70,8 @@ struct TermMatch {
 class GlossaryIndex {
 public:
     GlossaryIndex() = default;
-    // `entries` đã gán layer/rank. Giữ bản sao.
+    // `entries` đã gán layer/rank. Giữ bản sao; mỗi tên gọi khác thành một mục ảo (alias_of
+    // = term_en gốc) để tra và khớp trong câu như thuật ngữ thường.
     explicit GlossaryIndex(std::vector<GlossaryEntry> entries);
 
     // Mọi thuật ngữ xuất hiện trong `text` (ưu tiên cụm dài nhất, không chồng lấn),
@@ -78,6 +89,10 @@ private:
     struct Key {
         std::vector<std::u32string> words;
         std::vector<std::size_t> entries;  // chỉ số trong entries_, đã sắp theo ưu tiên
+        // Viết tắt toàn chữ hoa ("IT", "USE", "CM", "LOCA"): chỉ khớp đúng chữ hoa trong văn bản,
+        // để "it", "use", "cm" không bị coi là thuật ngữ.
+        bool case_sensitive = false;
+        std::u32string exact;
     };
     [[nodiscard]] TermMatch make_match(const Key& key, text::Span span) const;
 

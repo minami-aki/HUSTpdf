@@ -20,6 +20,15 @@ Span trim(const PageText& page, Span s) {
     return s;
 }
 
+// Mở rộng hai đầu vùng chọn ra trọn từ (chữ, số, gạch nối, nháy đơn).
+Span whole_words(const PageText& page, Span s) {
+    const std::u32string& t = page.text();
+    auto word_char = [](char32_t c) { return text::is_letter(c) || text::is_digit(c) || c == U'-' || c == U'\''; };
+    while (s.begin > 0 && s.begin < t.size() && word_char(t[s.begin - 1]) && word_char(t[s.begin])) --s.begin;
+    while (s.end > 0 && s.end < t.size() && word_char(t[s.end - 1]) && word_char(t[s.end])) ++s.end;
+    return s;
+}
+
 std::size_t count_words(const PageText& page, Span s) {
     const std::u32string& t = page.text();
     std::size_t words = 0;
@@ -41,6 +50,7 @@ bool has_terminal(const PageText& page, Span s) {
 }
 
 constexpr std::size_t kMinEdgeOverlap = 4;  // ký tự
+constexpr std::size_t kMaxLookupWords = 12;  // vùng chọn dài hơn không tra glossary như một thuật ngữ
 
 std::size_t overlap_len(Span a, Span b) {
     const std::size_t lo = std::max(a.begin, b.begin);
@@ -130,6 +140,17 @@ std::optional<TranslationPlan> make_plan(const PageText& page, Span selected, co
     plan.selected = selected;
     plan.kind = classify(page, selected, options.max_term_words);
     plan.translated = selected;
+    // Tra glossary/từ điển: vùng chọn mở rộng ra trọn từ (kéo chuột hụt vài chữ cái: "mergency core
+    // cooling syste"). Trùng khớp đúng một mục — kể cả thuật ngữ dài hơn max_term_words như
+    // "emergency core cooling system" — thì coi là tra một thuật ngữ.
+    if (options.glossary != nullptr && count_words(page, selected) <= kMaxLookupWords) {
+        const Span ws = whole_words(page, selected);
+        const std::u32string sel(std::u32string_view(page.text()).substr(ws.begin, ws.size()));
+        if (auto m = options.glossary->lookup(sel); m && m->entry->confirmed()) {
+            plan.kind = SelectionKind::Term;
+            selected = plan.selected = plan.translated = ws;
+        }
+    }
 
     const auto [first, last] = sentences_over(page, selected);
     if (first >= 0 && options.expand_to_sentence && plan.kind != SelectionKind::Term) {

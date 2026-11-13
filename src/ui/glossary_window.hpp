@@ -42,6 +42,8 @@ private:
     std::string form_vi_;
     std::string form_notes_;
     bool form_keep_ = false;
+    std::vector<std::string> form_aliases_;  // giữ nguyên khi lưu (sửa bằng CSV)
+    std::string form_explanation_;
     int form_target_ = 0;  // 0: glossary của tôi, 1: glossary tài liệu
     std::string message_;
     bool message_error_ = false;

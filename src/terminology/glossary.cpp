@@ -10,6 +10,7 @@
 #include <stdexcept>
 
 #include "terminology/words.hpp"
+#include "text/normalize.hpp"
 #include "util/utf8.hpp"
 
 namespace pdfread::terminology {
@@ -161,6 +162,14 @@ std::vector<GlossaryEntry> parse_glossary_csv(std::string_view data) {
         e.keep_english = parse_bool(cell(rows[r], "keep_english"));
         e.notes = cell(rows[r], "notes");
         e.source = cell(rows[r], "source");
+        e.explanation = cell(rows[r], "explanation");
+        const std::string aliases = cell(rows[r], "aliases");
+        for (std::size_t p = 0; p <= aliases.size();) {
+            const std::size_t bar = std::min(aliases.find('|', p), aliases.size());
+            std::string a = trim(aliases.substr(p, bar - p));
+            if (!a.empty()) e.aliases.push_back(std::move(a));
+            p = bar + 1;
+        }
         out.push_back(std::move(e));
     }
     return out;
@@ -175,8 +184,14 @@ std::vector<GlossaryEntry> load_glossary_csv(const std::filesystem::path& path) 
 }
 
 void save_glossary_csv(const std::filesystem::path& path, const std::vector<GlossaryEntry>& entries) {
-    std::vector<std::vector<std::string>> rows{{"term_en", "term_vi", "keep_english", "notes", "source"}};
-    for (const auto& e : entries) rows.push_back({e.term_en, e.term_vi, e.keep_english ? "1" : "0", e.notes, e.source});
+    std::vector<std::vector<std::string>> rows{
+        {"term_en", "term_vi", "keep_english", "notes", "source", "aliases", "explanation"}};
+    for (const auto& e : entries) {
+        if (!e.alias_of.empty()) continue;  // mục ảo của chỉ mục
+        std::string aliases;
+        for (const auto& a : e.aliases) aliases += (aliases.empty() ? "" : "|") + a;
+        rows.push_back({e.term_en, e.term_vi, e.keep_english ? "1" : "0", e.notes, e.source, aliases, e.explanation});
+    }
     std::error_code ec;
     if (path.has_parent_path()) std::filesystem::create_directories(path.parent_path(), ec);
     std::ofstream f(path, std::ios::binary | std::ios::trunc);
@@ -187,7 +202,30 @@ void save_glossary_csv(const std::filesystem::path& path, const std::vector<Glos
 
 // --- Chỉ mục -------------------------------------------------------------------
 
+std::pair<std::string, std::string> split_alias(const std::string& alias) {
+    const std::size_t eq = alias.find('=');
+    if (eq == std::string::npos) return {trim(alias), {}};
+    return {trim(alias.substr(0, eq)), trim(alias.substr(eq + 1))};
+}
+
 GlossaryIndex::GlossaryIndex(std::vector<GlossaryEntry> entries) : entries_(std::move(entries)) {
+    // Tên gọi khác -> mục ảo: "Am-241" (giữ nguyên), "Clebsch–Gordan Coefficients=hệ số Clebsch–Gordan".
+    const std::size_t base = entries_.size();
+    for (std::size_t i = 0; i < base; ++i) {
+        for (const std::string& alias : entries_[i].aliases) {
+            auto [name, vi] = split_alias(alias);
+            if (name.empty() || fold(name) == fold(entries_[i].term_en)) continue;
+            GlossaryEntry a = entries_[i];
+            a.aliases.clear();
+            a.alias_of = entries_[i].term_en;
+            a.term_en = std::move(name);
+            // Viết tắt: giữ nguyên khi dịch câu (target() = tên), nhưng term_vi mang nghĩa của
+            // thuật ngữ gốc để hiển thị khi tra ("Am-241" -> "americi-241").
+            a.keep_english = vi.empty();
+            a.term_vi = vi.empty() ? entries_[i].term_vi : std::move(vi);
+            entries_.push_back(std::move(a));
+        }
+    }
     // Gom các entry cùng term_en (đã chuẩn hóa) vào một key, sắp theo ưu tiên.
     std::map<std::vector<std::u32string>, std::vector<std::size_t>> groups;
     for (std::size_t i = 0; i < entries_.size(); ++i) {
@@ -200,9 +238,19 @@ GlossaryIndex::GlossaryIndex(std::vector<GlossaryEntry> entries) : entries_(std:
             const auto& eb = entries_[b];
             if (ea.confirmed() != eb.confirmed()) return ea.confirmed();
             if (ea.layer != eb.layer) return ea.layer < eb.layer;
+            // Cùng tầng: thuật ngữ gốc trước tên gọi khác của thuật ngữ khác.
+            if (ea.alias_of.empty() != eb.alias_of.empty()) return ea.alias_of.empty();
             return ea.rank < eb.rank;
         });
-        keys_.push_back({words, std::move(idx)});
+        Key key{words, std::move(idx), false, {}};
+        key.case_sensitive = std::all_of(key.entries.begin(), key.entries.end(), [&](std::size_t e) {
+            const std::u32string t = to_u32(entries_[e].term_en);
+            const auto letters = std::count_if(t.begin(), t.end(), [](char32_t ch) { return text::is_letter(ch); });
+            const bool any_lower = std::any_of(t.begin(), t.end(), [](char32_t ch) { return text::is_lower(ch); });
+            return letters >= 2 && !any_lower;
+        });
+        if (key.case_sensitive) key.exact = to_u32(entries_[key.entries.front()].term_en);
+        keys_.push_back(std::move(key));
     }
     for (std::size_t k = 0; k < keys_.size(); ++k) by_first_word_[keys_[k].words.front()].push_back(k);
     for (auto& [_, list] : by_first_word_) {
@@ -246,7 +294,15 @@ std::vector<TermMatch> GlossaryIndex::find_in(std::u32string_view text, const st
             if (it == by_first_word_.end()) continue;
             for (std::size_t k : it->second) {
                 if (best_key != SIZE_MAX && keys_[k].words.size() <= keys_[best_key].words.size()) continue;
-                if (words_match(words, i, keys_[k].words)) best_key = k;
+                if (!words_match(words, i, keys_[k].words)) continue;
+                if (keys_[k].case_sensitive) {
+                    const std::size_t b = words[i].span.begin;
+                    const std::size_t e = words[i + keys_[k].words.size() - 1].span.end;
+                    const std::u32string_view surface = text.substr(b, e - b);
+                    const std::u32string& x = keys_[k].exact;
+                    if (surface != x && !(surface.size() == x.size() + 1 && surface.starts_with(x) && surface.back() == U's')) continue;
+                }
+                best_key = k;
             }
         }
         if (best_key != SIZE_MAX) {

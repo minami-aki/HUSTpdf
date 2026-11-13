@@ -128,6 +128,12 @@ private:
     GLFWwindow* window_;
     AppOptions options_;
 
+    struct GlossaryLoad {
+        std::shared_ptr<const terminology::DomainCatalog> catalog;
+        std::unique_ptr<terminology::GlossaryStore> store;  // nullptr: lỗi
+        std::string catalog_version;
+        std::string error;
+    };
     struct ExtractResult {
         std::uint64_t ticket = 0;
         std::vector<terminology::TermCandidate> terms;
@@ -158,6 +164,10 @@ private:
     std::atomic<std::uint64_t> current_ticket_{0};
     ActiveTranslation active_;
 
+    ConcurrentQueue<GlossaryLoad> glossary_results_;
+    // Chỉ luồng loader dùng: bảng lĩnh vực để phân loại khi mở tài liệu.
+    std::shared_ptr<const terminology::DomainCatalog> loader_catalog_;
+    std::string loader_catalog_version_;
     ConcurrentQueue<OpenResult> open_results_;
     ConcurrentQueue<ExtractResult> extract_results_;
     ThreadPool loader_;  // mở tài liệu, phân loại lĩnh vực, trích thuật ngữ ở nền (1 luồng)

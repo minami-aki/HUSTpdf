@@ -45,13 +45,15 @@ Không đóng gói kèm. Tải `HY-MT1.5-1.8B-Q4_K_M.gguf` (1,13 GB) từ [tence
 ## Lĩnh vực và glossary
 
 - `data/domains.json`: 8 nhóm, 37 lĩnh vực con (tên, từ khóa phân loại, file glossary). Khi mở PDF, app phân loại lĩnh vực (tối đa 3, có độ tin cậy) theo mục lục và 3 trang đầu; đổi được ở ô **Lĩnh vực** trên toolbar.
-- Glossary là file CSV UTF-8, cột `term_en,term_vi,keep_english,notes,source` (sửa bằng Excel/trình soạn thảo được; quay lại app là tự nạp lại):
+- Glossary là file CSV UTF-8, cột `term_en,term_vi,keep_english,notes,source` và tùy chọn `aliases` (tên gọi khác, `tên=nghĩa|VIẾT_TẮT`), `explanation` (giải thích & công thức) — sửa bằng Excel/trình soạn thảo được; quay lại app là tự nạp lại:
   - `data/glossary/<lĩnh vực>.csv` — glossary lĩnh vực (hiện là **bản nháp** `source=draft`, ~30 thuật ngữ mỗi lĩnh vực, cần duyệt);
+  - `data/glossary/physics.nuclear.csv` — thêm **từ điển Kỹ thuật hạt nhân Anh–Việt** (`source=dict`, 3143 thuật ngữ + 56 viết tắt, ~1260 tên gọi khác, kèm giải thích & công thức), nhập từ file Markdown bằng `tools/dict/import_md_dictionary.py` (công thức LaTeX chuyển sang ký tự Unicode: T₁/₂, σ_f, ²³⁵U, √x; mục của từ điển thay mục nháp trùng tên);
   - `%APPDATA%\Pdfread\glossary\user.csv` — glossary của bạn (ưu tiên cao nhất);
   - `<tên file>.glossary.csv` cạnh PDF — glossary của tài liệu.
 - Thứ tự ưu tiên: của bạn > tài liệu > lĩnh vực điểm cao nhất > lĩnh vực khác của tài liệu. Thuật ngữ thuộc lĩnh vực ngoài tài liệu chỉ hiện ở "Nghĩa khác" khi tra từ.
 - Khi dịch: chỉ các thuật ngữ thực sự có trong câu được đưa vào prompt (mẫu "chỉ định thuật ngữ" của HY-MT1.5); công thức, mã, đại lượng có đơn vị, URL được thay bằng placeholder `⟦F1⟧ ⟦C1⟧ ⟦U1⟧ ⟦L1⟧` rồi khôi phục; popup báo thuật ngữ dịch sai và ký hiệu bị mất.
-- Bôi đen một từ/cụm ngắn có trong glossary: hiện nghĩa ngay (không gọi mô hình), kèm nghĩa ở lĩnh vực khác.
+- Bôi đen một từ/cụm có trong glossary (kể cả thuật ngữ dài như "emergency core cooling system", tên gọi khác, viết tắt như "LOCA", "Am-241"; kéo chuột hụt vài chữ cái vẫn được): hiện nghĩa ngay (không gọi mô hình), kèm **Giải thích & Công thức** nếu có và nghĩa ở lĩnh vực khác. Bôi đen câu/đoạn: chỉ hiện bản dịch — thuật ngữ trong câu vẫn được chỉ định cho mô hình, giải thích không đưa vào prompt.
+- Viết tắt toàn chữ hoa (IT, USE, CM…) chỉ khớp khi viết hoa đúng, để "it", "use", "cm" không bị coi là thuật ngữ.
 
 ## Chạy
 
@@ -85,6 +87,9 @@ Công cụ kiểm thử:
 
 ```powershell
 .\build\debug\bin\make_sample_pdf.exe sample.pdf 8          # tạo PDF mẫu 12 trang
+.\build\debug\bin\make_sample_pdf.exe nuclear.pdf --text tools\eval\nuclear_sample.txt   # dàn trang file văn bản
+# Nhập lại từ điển Markdown vào glossary (giữ các mục khác của file CSV):
+python tools\dict\import_md_dictionary.py Tu_dien_Ky_thuat_Hat_nhan.md data\glossary\physics.nuclear.csv --report
 .\build\debug\bin\pdfread.exe sample.pdf --snapshot out.png   # chờ render xong, chụp cửa sổ, thoát
 # Đặt sẵn vùng chọn (trang từ 1, tọa độ point từ góc trên-trái trang; đơn vị c/w/l):
 .\build\debug\bin\pdfread.exe sample.pdf --select 1:72,150:300,200 --snapshot out.png

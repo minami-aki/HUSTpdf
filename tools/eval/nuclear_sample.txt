@@ -1,0 +1,9 @@
+Reactor Physics and Radiation Protection: Lecture Notes
+
+The effective multiplication factor of the core is kept close to unity during normal operation. Reactivity is controlled by control rods and by the concentration of soluble boron in the primary coolant. Because the delayed neutron fraction is small, the reactor period becomes very short if the inserted reactivity approaches one dollar.
+
+After shutdown, the decay heat must be removed by the residual heat removal system. During a loss-of-coolant accident, the emergency core cooling system injects borated water into the reactor pressure vessel to keep the peak cladding temperature below the acceptance limit.
+
+Americium-241 is used in ionization smoke detectors. The Am-241 source emits alpha particles with an energy of about 5.49 MeV and low-energy gamma rays.
+
+The occupational dose limit is 20 mSv per year averaged over five years. Following the ALARA principle, the effective dose of radiation workers should be reduced by time, distance and shielding.

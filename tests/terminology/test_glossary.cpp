@@ -1,3 +1,4 @@
+#include <filesystem>
 #include <string>
 #include <vector>
 
@@ -116,4 +117,61 @@ TEST_CASE("check_terms reports glossary violations case-insensitively", "[termin
     const auto missing = terminology::check_terms("Ứng Suất đạt 145 MPa, thấp hơn sức bền. Firmware  mới.", req);
     REQUIRE(missing.size() == 1);
     CHECK(missing[0].term_en == "yield strength");
+}
+
+TEST_CASE("parse_glossary_csv reads aliases and explanation", "[terminology][csv]") {
+    const auto entries = terminology::parse_glossary_csv(
+        "term_en,term_vi,keep_english,notes,source,aliases,explanation\n"
+        "Americium-241,americi-241,0,,dict,Am-241,\"T₁/₂ = 432.6 năm, alpha 5.49 MeV\"\n"
+        "Angular Momentum Coupling,cộng mômen động lượng,0,,dict,Clebsch–Gordan Coefficients=hệ số Clebsch–Gordan|CG,\n");
+    REQUIRE(entries.size() == 2);
+    CHECK(entries[0].aliases == std::vector<std::string>{"Am-241"});
+    CHECK(entries[0].explanation == "T₁/₂ = 432.6 năm, alpha 5.49 MeV");
+    CHECK(entries[1].aliases.size() == 2);
+    CHECK(terminology::split_alias(entries[1].aliases[0]).second == "hệ số Clebsch–Gordan");
+    CHECK(terminology::split_alias("CG").second.empty());
+}
+
+TEST_CASE("GlossaryIndex matches aliases: abbreviations kept, named aliases translated", "[terminology][glossary]") {
+    GlossaryEntry am = entry("Americium-241", "americi-241", Layer::PrimaryDomain);
+    am.aliases = {"Am-241"};
+    am.explanation = "T₁/₂ = 432.6 năm";
+    GlossaryEntry cg = entry("Angular Momentum Coupling", "cộng mômen động lượng", Layer::PrimaryDomain);
+    cg.aliases = {"Clebsch–Gordan Coefficients=hệ số Clebsch–Gordan"};
+    const terminology::GlossaryIndex idx({am, cg});
+
+    const auto m = idx.lookup(U"Am-241");
+    REQUIRE(m);
+    CHECK(m->entry->alias_of == "Americium-241");
+    CHECK(m->entry->keep_english);
+    CHECK(m->entry->target() == "Am-241");
+    CHECK(m->entry->explanation == "T₁/₂ = 432.6 năm");
+    CHECK(m->entry->term_vi == "americi-241");  // nghĩa của thuật ngữ gốc, để hiển thị
+
+    const auto found = idx.find_in(U"The Clebsch–Gordan coefficients couple the momenta of Am-241 nuclei.");
+    REQUIRE(found.size() == 2);
+    CHECK(found[0].entry->target() == "hệ số Clebsch–Gordan");
+    CHECK(found[1].entry->target() == "Am-241");
+
+    // Ghi ra CSV từ chỉ mục (có cả mục ảo): mục ảo không ghi, cột aliases/explanation được giữ.
+    const auto path = std::filesystem::temp_directory_path() / "pdfread_alias_roundtrip.csv";
+    terminology::save_glossary_csv(path, idx.entries());
+    const auto back = terminology::load_glossary_csv(path);
+    std::filesystem::remove(path);
+    REQUIRE(back.size() == 2);
+    CHECK(back[0].aliases == std::vector<std::string>{"Am-241"});
+    CHECK(back[0].explanation == "T₁/₂ = 432.6 năm");
+    CHECK(back[1].aliases == cg.aliases);
+}
+
+TEST_CASE("GlossaryIndex matches all-caps abbreviations case-sensitively", "[terminology][glossary]") {
+    GlossaryEntry it = entry("IT", "chuyển dời đồng phân", Layer::PrimaryDomain, 0, {}, true);
+    GlossaryEntry loca = entry("LOCA", "sự cố mất chất tải nhiệt", Layer::PrimaryDomain, 0, {}, true);
+    GlossaryEntry am = entry("Americium-241", "americi-241", Layer::PrimaryDomain);
+    const terminology::GlossaryIndex idx({it, loca, am});
+    CHECK(idx.find_in(U"It decays because it is unstable.").empty());
+    CHECK(idx.find_in(U"The IT branch dominates.").size() == 1);
+    CHECK(idx.find_in(U"Two LOCAs were analysed.").size() == 1);
+    CHECK(idx.find_in(U"A loca is not an acronym here.").empty());
+    CHECK(idx.lookup(U"americium-241"));  // thuật ngữ thường: không phân biệt hoa/thường
 }

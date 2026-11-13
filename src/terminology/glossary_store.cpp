@@ -6,6 +6,7 @@
 
 #include "terminology/words.hpp"
 #include "util/log.hpp"
+#include "util/timer.hpp"
 #include "util/utf8.hpp"
 
 namespace pdfread::terminology {
@@ -79,6 +80,7 @@ bool GlossaryStore::refresh() {
 
 std::shared_ptr<const GlossaryIndex> GlossaryStore::index() {
     if (!dirty_ && index_) return index_;
+    ScopedTimer timer("build glossary index");
     std::vector<GlossaryEntry> all;
     auto add = [&](const std::vector<GlossaryEntry>& entries, Layer layer, int rank, const std::string& domain) {
         for (GlossaryEntry e : entries) {

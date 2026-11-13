@@ -165,3 +165,39 @@ TEST_CASE("make_plan adds glossary terms, placeholders and glossary answers", "[
     CHECK(plain->request.terms.empty());
     CHECK_FALSE(plain->glossary_answer);
 }
+
+TEST_CASE("make_plan treats a long selection matching a glossary entry as a term", "[context][plan]") {
+    const auto pt = text::build_page_text({
+        make_block(50, 100, {"After the trip the emergency core cooling system injection valve opened quickly."}),
+    });
+    terminology::GlossaryEntry e;
+    e.term_en = "Emergency Core Cooling System Injection Valve";
+    e.term_vi = "van phun của hệ thống làm mát vùng hoạt khẩn cấp";
+    e.explanation = "Van đưa nước pha bo vào vùng hoạt.";
+    e.layer = terminology::Layer::PrimaryDomain;
+    const terminology::GlossaryIndex idx({e});
+    context::PlanOptions opts;
+    opts.glossary = &idx;
+
+    // 6 từ (> max_term_words) nhưng trùng đúng một mục: tra thuật ngữ, có giải thích, không mở rộng ra câu.
+    const auto plan = context::make_plan(pt, find(pt, "emergency core cooling system injection valve"), opts);
+    REQUIRE(plan);
+    CHECK(plan->kind == SelectionKind::Term);
+    REQUIRE(plan->glossary_answer);
+    CHECK(plan->glossary_answer->entry.explanation == "Van đưa nước pha bo vào vùng hoạt.");
+    CHECK_FALSE(plan->expanded);
+
+    // Kéo chuột hụt chữ cái ở hai đầu: mở rộng ra trọn từ rồi tra.
+    const auto sloppy = context::make_plan(pt, find(pt, "mergency core cooling system injection val"), opts);
+    REQUIRE(sloppy);
+    CHECK(sloppy->kind == SelectionKind::Term);
+    CHECK(sloppy->glossary_answer);
+
+    // Cả câu: dịch bằng mô hình, thuật ngữ vào prompt nhưng không có trả lời glossary.
+    const auto sentence = context::make_plan(pt, find(pt, "After the trip the emergency core cooling system injection valve opened quickly."), opts);
+    REQUIRE(sentence);
+    CHECK(sentence->kind == SelectionKind::Sentences);
+    CHECK_FALSE(sentence->glossary_answer);
+    REQUIRE(sentence->request.terms.size() == 1);
+    CHECK(sentence->request.terms[0].term_vi == "van phun của hệ thống làm mát vùng hoạt khẩn cấp");
+}

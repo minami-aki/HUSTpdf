@@ -41,6 +41,8 @@ public:
         std::string term_vi;
         std::string domain;  // tên lĩnh vực / nguồn
         std::string notes;
+        std::string canonical;    // thuật ngữ gốc khi tra bằng tên gọi khác / viết tắt ("Am-241" -> "Americium-241")
+        std::string explanation;  // giải thích & công thức (chỉ có khi tra một thuật ngữ đơn lẻ)
         std::vector<std::pair<std::string, std::string>> alternatives;  // (nghĩa, lĩnh vực)
     };
 

@@ -1,6 +1,7 @@
 #include "ui/translation_popup.hpp"
 
 #include <algorithm>
+#include <cfloat>
 #include <format>
 
 namespace pdfread::ui {
@@ -68,12 +69,26 @@ void TranslationPopup::on_event(const translate::TranslationEvent& e) {
 
 void TranslationPopup::draw_glossary_answer() {
     ImGui::PushTextWrapPos(0.0f);
-    ImGui::TextDisabled("%s", answer_.term_en.c_str());
+    ImGui::TextDisabled("%s", answer_.canonical.empty() ? answer_.term_en.c_str()
+                                                        : std::format("{} → {}", answer_.term_en, answer_.canonical).c_str());
     ImGui::PushStyleColor(ImGuiCol_Text, kTermColor);
     ImGui::TextUnformatted(answer_.term_vi.c_str());
     ImGui::PopStyleColor();
     if (!answer_.domain.empty()) ImGui::TextDisabled("%s", answer_.domain.c_str());
-    if (!answer_.notes.empty()) ImGui::TextUnformatted(answer_.notes.c_str());
+    if (!answer_.notes.empty()) ImGui::TextDisabled("%s", answer_.notes.c_str());
+    if (!answer_.explanation.empty()) {
+        // Giải thích & công thức: vùng cuộn có giới hạn chiều cao, popup không che hết trang.
+        ImGui::Spacing();
+        ImGui::SeparatorText("Giải thích & Công thức");
+        const float max_h = ImGui::GetTextLineHeightWithSpacing() * 12.0f;
+        ImGui::SetNextWindowSizeConstraints(ImVec2(0, 0), ImVec2(FLT_MAX, max_h));
+        ImGui::BeginChild("##explanation", ImVec2(0, 0), ImGuiChildFlags_AutoResizeY);
+        ImGui::PushTextWrapPos(0.0f);
+        ImGui::TextUnformatted(answer_.explanation.c_str(), answer_.explanation.c_str() + answer_.explanation.size());
+        ImGui::PopTextWrapPos();
+        ImGui::EndChild();
+        ImGui::TextDisabled("Số liệu mang tính tham khảo.");
+    }
     if (!answer_.alternatives.empty()) {
         ImGui::Spacing();
         ImGui::TextDisabled("Nghĩa khác:");
@@ -94,7 +109,8 @@ TranslationPopup::Action TranslationPopup::draw(const std::pair<ImVec2, ImVec2>&
     const float margin = 8.0f * ui_scale;
     const float gap = 6.0f * ui_scale;
     const float bounds_w = bounds.second.x - bounds.first.x;
-    const float width = std::max(160.0f * ui_scale, std::min(460.0f * ui_scale, bounds_w - 2 * margin));
+    const float preferred = (glossary_mode_ && !answer_.explanation.empty() ? 560.0f : 460.0f) * ui_scale;
+    const float width = std::max(160.0f * ui_scale, std::min(preferred, bounds_w - 2 * margin));
     const float max_h = std::max(120.0f * ui_scale, (bounds.second.y - bounds.first.y) * 0.6f);
     const float h = last_height_ > 0 ? last_height_ : 80.0f * ui_scale;
 

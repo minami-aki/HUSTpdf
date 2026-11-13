@@ -76,18 +76,26 @@ App::App(GLFWwindow* window, const pdf::RootContext& root, AppOptions options)
     ui_scale_ = std::max(1.0f, xs);
     ui::apply_style(ui_scale_);
 
-    // Tầng 1: bảng lĩnh vực + glossary (lĩnh vực, người dùng, tài liệu).
-    try {
-        ScopedTimer t("load glossaries");
-        catalog_ = std::make_shared<const terminology::DomainCatalog>(
-            terminology::DomainCatalog::load(options_.data_dir / "domains.json"));
-        glossary_ = std::make_unique<terminology::GlossaryStore>(*catalog_, app_data_dir() / "glossary" / "user.csv");
-        log::info("Đã nạp {} lĩnh vực, {} mục glossary", catalog_->subdomains().size(), glossary_->index()->size());
-        for (const std::string& e : glossary_->errors()) log::warn("{}", e);
-    } catch (const std::exception& e) {
-        log::warn("Không dùng được lĩnh vực/glossary: {}", e.what());
-        set_status(std::format("Không nạp được lĩnh vực/glossary: {}", e.what()), true);
-    }
+    // Tầng 1: bảng lĩnh vực + glossary (lĩnh vực, người dùng, tài liệu) — nạp trên luồng loader
+    // (~40 file CSV, từ điển chuyên ngành ~1 MB) để cửa sổ hiện ngay. Luồng loader chạy tuần tự
+    // nên việc này luôn xong trước khi một tài liệu được mở/phân loại.
+    loader_.post([this, domains_json = options_.data_dir / "domains.json"] {
+        GlossaryLoad r;
+        try {
+            ScopedTimer t("load glossaries");
+            r.catalog = std::make_shared<const terminology::DomainCatalog>(terminology::DomainCatalog::load(domains_json));
+            r.store = std::make_unique<terminology::GlossaryStore>(*r.catalog, app_data_dir() / "glossary" / "user.csv");
+            (void)r.store->index();  // dựng sẵn chỉ mục
+            r.catalog_version = sha256_file(domains_json).value_or("");
+            loader_catalog_ = r.catalog;
+            loader_catalog_version_ = r.catalog_version;
+        } catch (const std::exception& e) {
+            r.store.reset();
+            r.error = e.what();
+        }
+        glossary_results_.push(std::move(r));
+        glfwPostEmptyEvent();
+    });
 
     // Cơ sở dữ liệu: cài đặt, cache bản dịch, thông tin theo tài liệu.
     try {
@@ -99,7 +107,6 @@ App::App(GLFWwindow* window, const pdf::RootContext& root, AppOptions options)
     } catch (const std::exception& e) {
         log::warn("Không mở được cơ sở dữ liệu (chạy không có cache/cài đặt): {}", e.what());
     }
-    if (catalog_) catalog_version_ = sha256_file(options_.data_dir / "domains.json").value_or("");
     load_settings();
 
     glossary_window_.open = options_.open_glossary;
@@ -373,11 +380,16 @@ void App::request_translation(bool force_model, bool bypass_cache) {
                 const auto& a = *plan->glossary_answer;
                 ui::TranslationPopup::GlossaryAnswer ans;
                 ans.term_en = a.entry.term_en;
-                ans.term_vi = a.entry.target();
+                // Viết tắt giữ nguyên khi dịch câu nhưng có nghĩa tiếng Việt để hiển thị (ALARA -> "thấp nhất…").
+                ans.term_vi = text::match_initial_case(
+                    a.entry.keep_english && !a.entry.term_vi.empty() ? a.entry.term_vi : a.entry.target(), "A");
+                ans.canonical = a.entry.alias_of;
+                ans.explanation = a.entry.explanation;
                 ans.domain = a.entry.domain_id.empty()
                                  ? (a.entry.layer == terminology::Layer::User ? "Glossary của tôi" : "Glossary của tài liệu")
                                  : domain_name(a.entry.domain_id);
                 if (a.entry.source == "draft") ans.domain += " · bản nháp";
+                if (a.entry.source == "dict") ans.domain += " · từ điển chuyên ngành";
                 ans.notes = a.entry.notes;
                 for (const auto& alt : a.alternatives) ans.alternatives.emplace_back(alt.target(), domain_name(alt.domain_id));
                 log::debug("Tra glossary: {} -> {}", ans.term_en, ans.term_vi);
@@ -784,7 +796,9 @@ void App::open_file(const std::filesystem::path& path) {
     loading_ = true;
     loading_path_ = path;
     set_status(std::format("Đang mở {}…", file_name_utf8(path)), false);
-    loader_.post([this, path, ticket, catalog = catalog_, store = store_.get(), catalog_version = catalog_version_] {
+    loader_.post([this, path, ticket, store = store_.get()] {
+        const auto& catalog = loader_catalog_;  // luồng loader: đã nạp ở job đầu tiên
+        const std::string& catalog_version = loader_catalog_version_;
         OpenResult r;
         r.ticket = ticket;
         r.path = path;
@@ -855,6 +869,18 @@ void App::open_file(const std::filesystem::path& path) {
 }
 
 void App::poll_open_results() {
+    for (GlossaryLoad& g : glossary_results_.drain()) {
+        if (!g.store) {
+            log::warn("Không dùng được lĩnh vực/glossary: {}", g.error);
+            set_status(std::format("Không nạp được lĩnh vực/glossary: {}", g.error), true);
+            continue;
+        }
+        catalog_ = std::move(g.catalog);
+        glossary_ = std::move(g.store);
+        catalog_version_ = std::move(g.catalog_version);
+        log::info("Đã nạp {} lĩnh vực, {} mục glossary", catalog_->subdomains().size(), glossary_->index()->size());
+        for (const std::string& e : glossary_->errors()) log::warn("{}", e);
+    }
     for (ExtractResult& r : extract_results_.drain()) {
         if (r.ticket != open_ticket_) continue;
         extracted_terms_ = std::move(r.terms);

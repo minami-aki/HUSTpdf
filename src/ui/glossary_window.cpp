@@ -46,6 +46,8 @@ void GlossaryWindow::load_form(const GlossaryEntry& e) {
     form_vi_ = e.term_vi;
     form_notes_ = e.notes;
     form_keep_ = e.keep_english;
+    form_aliases_ = e.alias_of.empty() ? e.aliases : std::vector<std::string>{};
+    form_explanation_ = e.explanation;
     form_target_ = e.layer == Layer::Document ? 1 : 0;
     message_.clear();
 }
@@ -101,6 +103,7 @@ bool GlossaryWindow::draw(terminology::GlossaryStore& store, const std::vector<t
                 const std::u32string needle = terminology::lower(to_u32(search_));
                 std::vector<GlossaryEntry> rows;
                 for (const auto& e : idx->entries()) {
+                    if (!e.alias_of.empty()) continue;  // tên gọi khác: đã nằm trong cột aliases của mục gốc
                     if (contains_ci(e.term_en, needle) || contains_ci(e.term_vi, needle)) rows.push_back(e);
                 }
                 terminology::save_glossary_csv(path_from_utf8(out), rows);
@@ -148,6 +151,7 @@ bool GlossaryWindow::draw_terms_tab(terminology::GlossaryStore& store, float ui_
     const std::u32string needle = terminology::lower(to_u32(trim(search_)));
     std::vector<const GlossaryEntry*> rows;
     for (const auto& e : idx->entries()) {
+        if (!e.alias_of.empty()) continue;  // tên gọi khác hiển thị cùng mục gốc
         const bool pass_filter = filter_ == 0 || (filter_ == 1 && e.layer == Layer::User) ||
                                  (filter_ == 2 && e.layer == Layer::Document) ||
                                  (filter_ == 3 && (e.layer == Layer::PrimaryDomain || e.layer == Layer::OtherDomain)) ||
@@ -218,6 +222,24 @@ bool GlossaryWindow::draw_form(terminology::GlossaryStore& store) {
     ImGui::SameLine();
     ImGui::SetNextItemWidth(-1);
     ImGui::InputTextWithHint("##notes", "Ghi chú", &form_notes_);
+    // Tên gọi khác và giải thích & công thức: chỉ xem ở đây, sửa trong file CSV (cột aliases, explanation).
+    if (!form_aliases_.empty()) {
+        std::string list;
+        for (const auto& a : form_aliases_) list += (list.empty() ? "" : " · ") + a;
+        ImGui::PushTextWrapPos(0.0f);
+        ImGui::TextDisabled("Tên gọi khác: %s", list.c_str());
+        ImGui::PopTextWrapPos();
+    }
+    if (!form_explanation_.empty()) {
+        ImGui::BeginChild("##form_explanation", ImVec2(0, ImGui::GetTextLineHeightWithSpacing() * 4.5f),
+                          ImGuiChildFlags_Borders);
+        ImGui::PushTextWrapPos(0.0f);
+        ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+        ImGui::TextUnformatted(form_explanation_.c_str(), form_explanation_.c_str() + form_explanation_.size());
+        ImGui::PopStyleColor();
+        ImGui::PopTextWrapPos();
+        ImGui::EndChild();
+    }
 
     ImGui::RadioButton("Glossary của tôi", &form_target_, 0);
     ImGui::SameLine();
@@ -238,6 +260,8 @@ bool GlossaryWindow::draw_form(terminology::GlossaryStore& store) {
             e.term_vi = trim(form_vi_);
             e.keep_english = form_keep_;
             e.notes = trim(form_notes_);
+            e.aliases = form_aliases_;
+            e.explanation = form_explanation_;
             e.source = "user";
             store.upsert(target, e);
             message_ = std::format("Đã lưu \"{}\" vào {}", en, form_target_ == 1 ? "glossary của tài liệu" : "glossary của tôi");

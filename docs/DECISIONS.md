@@ -124,6 +124,18 @@ Tập `tools/eval/nuclear.csv` (40 câu hạt nhân – nguyên tử, có ngữ 
 - Bổ sung đơn vị hạt nhân vào bộ nhận diện đại lượng (eV…GeV, Bq, Ci, Gy, Sv, rem, b/barn, u, MWe, GWd/tU…) — dùng khi bật bảo vệ đại lượng.
 - Mẫu prompt ngữ cảnh (cấu hình 3) vẫn có lúc dịch câu ngữ cảnh thay cho câu chính (câu #1) — giữ quyết định M4: tắt mặc định.
 
+## 2026-11-13 — từ điển Kỹ thuật hạt nhân Anh–Việt (người dùng chốt cách hiểu và các đề xuất)
+
+- Nguồn: file Markdown của người dùng (3148 mục / 26 phần, giải thích chuyên sâu + công thức LaTeX, phụ lục 147 viết tắt). Đóng gói trong `data/` (phát hành cùng app theo AGPL). Phụ lục A (bảng hằng số, đơn vị, số liệu phân hạch) không nạp.
+- Nhập bằng `tools/dict/import_md_dictionary.py` vào `physics.nuclear.csv` (thêm cột `aliases`, `explanation`); mục của từ điển (`source=dict`) thay mục nháp trùng tên hoặc trùng tên gọi khác (229 mục nháp bị thay, 313 giữ lại). Nghĩa tiếng Việt dùng giữa câu: bỏ viết hoa chữ đầu (trừ tên riêng/viết tắt); "Proton = Proton" -> nghĩa "proton".
+- Tên thuật ngữ có phần phụ: ký hiệu `($\sigma$)` -> "Ký hiệu: σ" trong giải thích; viết tắt/tên khác trong ngoặc -> tên gọi khác (ghép với ngoặc tương ứng bên tiếng Việt); mô tả có dấu phẩy -> ghi chú; ký hiệu phản ứng `(n,2n)`, `(α,n)` giữ trong tên. "A & B", "A / B", "A, B": chỉ tách khi vế đầu là cụm >= 2 từ và số vế khớp với tiếng Việt; vế sau chỉ thành tên gọi khác nếu là cụm từ hoặc viết tắt (tránh "Toroidal", "Time", "Nuclear" thành thuật ngữ). Một viết tắt dùng cho nhiều mục chỉ giữ ở mục nó thực sự viết tắt (khớp chữ cái đầu/số). Viết tắt ở phụ lục đã là tên gọi khác của thuật ngữ thì không thêm mục riêng.
+- LaTeX -> Unicode (ImGui không hiển thị được LaTeX; không thêm thư viện vẽ công thức): chữ Hy Lạp, ký hiệu toán, chỉ số trên/dưới Unicode khi có (ngược lại `_x`, `^(…)`), `\frac` -> a/b, `\sqrt` -> √, dấu mũ/gạch trên bằng ký tự kết hợp; khoảng trắng trong công thức bỏ như LaTeX rồi thêm quanh dấu quan hệ và phép toán hai ngôi; "500 - 700" giữa hai số -> "500–700"; công thức khối `$$…$$` xuống dòng riêng.
+- Chỉ mục: mỗi tên gọi khác là một mục ảo (`alias_of`); viết tắt giữ nguyên khi dịch câu nhưng hiển thị nghĩa của thuật ngữ gốc khi tra; trùng tên thì thuật ngữ gốc trước tên gọi khác. Viết tắt toàn chữ hoa khớp phân biệt hoa/thường (trước đó "IT", "USE", "CM" khớp nhầm "it", "use", "cm").
+- Tra từ: vùng chọn trùng đúng một mục (tối đa 12 từ) là "thuật ngữ" dù dài hơn 4 từ; vùng chọn được mở rộng ra trọn từ trước khi tra (kéo chuột hụt chữ cái). Giải thích & Công thức chỉ hiện ở popup tra thuật ngữ (vùng cuộn tối đa ~12 dòng, popup rộng 560 px), không hiện khi dịch câu, không vào prompt.
+- Glossary (~40 file, 1,2 MB) nạp trên luồng loader thay vì UI thread (đo 140–270 ms); chỉ mục dựng lại ~35–50 ms khi đổi lĩnh vực.
+- Thống nhất mục nháp với từ điển: detector -> "detector" (từ điển dùng "detector" ở 28 mục).
+- Đánh giá `tools/eval/nuclear.csv` (cấu hình glossary): thuật ngữ đúng 97,9 % (142/145), 0 lỗi placeholder, 0 mất số; 2 lần "hoạt độ phóng xạ" được dịch gọn là "hoạt độ" (nghĩa đúng, hậu kiểm so khớp nguyên văn). Từ điển dùng "năng lượng liên kết riêng" cho binding energy per nucleon — mô hình đôi khi thêm "của mỗi hạt nhân"; giữ theo từ điển của người dùng.
+
 ## Thông tin tham chiếu
 
 - vcpkg baseline: `177e8175121536d414f405ed8b3099b325a42638` (2026-11-11).

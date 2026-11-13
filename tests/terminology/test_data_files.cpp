@@ -72,11 +72,26 @@ TEST_CASE("Nuclear glossary finds reactor and atomic physics terms", "[terminolo
     const auto* sub = cat.find("physics.nuclear");
     REQUIRE(sub != nullptr);
     const auto entries = terminology::load_glossary_csv(sub->glossary);
-    CHECK(entries.size() >= 400);
+    CHECK(entries.size() >= 3000);  // từ điển chuyên ngành (source=dict) + mục nháp còn lại
+    std::size_t with_explanation = 0;
+    for (const auto& e : entries) with_explanation += e.explanation.empty() ? 0 : 1;
+    CHECK(with_explanation >= 3000);
     terminology::GlossaryIndex index(entries);
     const std::u32string text =
         U"The binding energy per nucleon peaks near iron, while the delayed neutron fraction controls the reactor period.";
     std::vector<std::string> found;
-    for (const auto& m : index.find_in(text)) found.push_back(m.entry->term_en);
+    for (const auto& m : index.find_in(text)) found.push_back(to_utf8(terminology::lower(to_u32(m.entry->term_en))));
     CHECK(found == std::vector<std::string>{"binding energy per nucleon", "delayed neutron fraction", "reactor period"});
+
+    // Tra viết tắt / ký hiệu đồng vị: trỏ về thuật ngữ gốc, có giải thích.
+    const auto am = index.lookup(U"Am-241");
+    REQUIRE(am);
+    CHECK(am->entry->alias_of == "Americium-241");
+    CHECK_FALSE(am->entry->explanation.empty());
+    // Không còn LaTeX thô trong giải thích.
+    std::vector<std::string> raw_latex;
+    for (const auto& e : entries) {
+        if (e.explanation.find('\\') != std::string::npos) raw_latex.push_back(e.term_en);
+    }
+    CHECK(raw_latex.empty());
 }
