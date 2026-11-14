@@ -1,4 +1,6 @@
-# Pdfread
+# HUSTpdf
+
+*(tên cũ: Pdfread)*
 
 Trình đọc PDF khoa học – kỹ thuật, dịch Anh → Việt tức thời khi bôi đen. Chạy hoàn toàn offline, C++20 native (GLFW + OpenGL 3.3 + Dear ImGui, MuPDF, llama.cpp + HY-MT1.5-1.8B).
 
@@ -36,20 +38,20 @@ ctest --preset debug
 
 Lần build đầu vcpkg sẽ tải và biên dịch các thư viện phụ thuộc nên chậm (khoảng 15–20 phút, chủ yếu là MuPDF và HarfBuzz); các lần sau dùng binary cache.
 
-Mọi file chạy và DLL nằm chung trong `build/<preset>/bin/`: `pdfread.exe`, các DLL của llama.cpp/ggml (`llama.dll`, `ggml*.dll`, mỗi biến thể CPU một `ggml-cpu-*.dll`, ggml tự chọn biến thể tốt nhất lúc chạy), thư mục `data/fonts`.
+Mọi file chạy và DLL nằm chung trong `build/<preset>/bin/`: `HUSTpdf.exe`, các DLL của llama.cpp/ggml (`llama.dll`, `ggml*.dll`, mỗi biến thể CPU một `ggml-cpu-*.dll`, ggml tự chọn biến thể tốt nhất lúc chạy), thư mục `data/fonts`.
 
 ## Mô hình dịch
 
 Không đóng gói kèm. Lần chạy đầu (chưa có mô hình) app mở cửa sổ **Mô hình dịch**:
 
-- **Tải từ Hugging Face**: `HY-MT1.5-1.8B-Q4_K_M.gguf` (1,13 GB) từ [tencent/HY-MT1.5-1.8B-GGUF](https://huggingface.co/tencent/HY-MT1.5-1.8B-GGUF). App hiện giấy phép Tencent HY Community License, chỉ tải khi bạn đồng ý; lưu vào `%LOCALAPPDATA%\Pdfread\models\` (kèm `HY-MT1.5-License.txt`), có thanh tiến trình, tạm dừng / tải tiếp (HTTP Range, kể cả sau khi thoát app), tự thử lại khi rớt mạng, kiểm tra SHA-256 `4383ac0c3c8e476de98ff979c2a3f069f8c4fb385e7860cf2d28da896cc477c7` trước khi dùng.
+- **Tải từ Hugging Face**: `HY-MT1.5-1.8B-Q4_K_M.gguf` (1,13 GB) từ [tencent/HY-MT1.5-1.8B-GGUF](https://huggingface.co/tencent/HY-MT1.5-1.8B-GGUF). App hiện giấy phép Tencent HY Community License, chỉ tải khi bạn đồng ý; lưu vào `%LOCALAPPDATA%\HUSTpdf\models\` (kèm `HY-MT1.5-License.txt`), có thanh tiến trình, tạm dừng / tải tiếp (HTTP Range, kể cả sau khi thoát app), tự thử lại khi rớt mạng, kiểm tra SHA-256 `4383ac0c3c8e476de98ff979c2a3f069f8c4fb385e7860cf2d28da896cc477c7` trước khi dùng.
 - **Chọn file GGUF có sẵn** (máy không có mạng).
 
-Đường dẫn mô hình được lưu; sau lần đầu app không cần mạng. Thư mục tìm mô hình tự động: `%LOCALAPPDATA%\Pdfread\models`, `models/` cạnh `pdfread.exe`, `models/` ở gốc dự án (khi phát triển; nằm trong `.gitignore`). Cửa sổ này (nút **Mô hình…**) còn chỉnh số luồng CPU và xóa cache bản dịch.
+Đường dẫn mô hình được lưu; sau lần đầu app không cần mạng. Thư mục tìm mô hình tự động: `%LOCALAPPDATA%\HUSTpdf\models`, `models/` cạnh `HUSTpdf.exe`, `models/` ở gốc dự án (khi phát triển; nằm trong `.gitignore`). Cửa sổ này (nút **Mô hình…**) còn chỉnh số luồng CPU và xóa cache bản dịch.
 
 ## Cache và cài đặt
 
-`%LOCALAPPDATA%\Pdfread\pdfread.db` (SQLite) lưu:
+`%LOCALAPPDATA%\HUSTpdf\pdfread.db` (SQLite) lưu:
 
 - **cache bản dịch** — khóa là SHA-256 của đúng prompt gửi mô hình (câu, thuật ngữ chỉ định, ngữ cảnh) + tên mô hình; bôi đen lại câu đã dịch thì hiện ngay (popup có nút **Dịch lại**); chỉ lưu bản dịch không có cảnh báo hậu kiểm; tối đa 20 000 mục;
 - **cài đặt** — mô hình, số luồng, "Dịch tự động", dịch cả câu / chỉ phần chọn;
@@ -63,7 +65,7 @@ Glossary vẫn là các file CSV (xem dưới).
 - Glossary là file CSV UTF-8, cột `term_en,term_vi,keep_english,notes,source` và tùy chọn `aliases` (tên gọi khác, `tên=nghĩa|VIẾT_TẮT`), `explanation` (giải thích & công thức) — sửa bằng Excel/trình soạn thảo được; quay lại app là tự nạp lại:
   - `data/glossary/<lĩnh vực>.csv` — glossary lĩnh vực (hiện là **bản nháp** `source=draft`, ~30 thuật ngữ mỗi lĩnh vực, cần duyệt);
   - `data/glossary/physics.nuclear.csv` — thêm **từ điển Kỹ thuật hạt nhân Anh–Việt** (`source=dict`, 3143 thuật ngữ + 56 viết tắt, ~1260 tên gọi khác, kèm giải thích & công thức), nhập từ file Markdown bằng `tools/dict/import_md_dictionary.py` (công thức LaTeX chuyển sang ký tự Unicode: T₁/₂, σ_f, ²³⁵U, √x; mục của từ điển thay mục nháp trùng tên);
-  - `%APPDATA%\Pdfread\glossary\user.csv` — glossary của bạn (ưu tiên cao nhất);
+  - `%APPDATA%\HUSTpdf\glossary\user.csv` — glossary của bạn (ưu tiên cao nhất);
   - `<tên file>.glossary.csv` cạnh PDF — glossary của tài liệu.
 - Thứ tự ưu tiên: của bạn > tài liệu > lĩnh vực điểm cao nhất > lĩnh vực khác của tài liệu. Thuật ngữ thuộc lĩnh vực ngoài tài liệu chỉ hiện ở "Nghĩa khác" khi tra từ.
 - Khi dịch: chỉ các thuật ngữ thực sự có trong câu được đưa vào prompt (mẫu "chỉ định thuật ngữ" của HY-MT1.5); công thức, mã, đại lượng có đơn vị, URL được thay bằng placeholder `⟦F1⟧ ⟦C1⟧ ⟦U1⟧ ⟦L1⟧` rồi khôi phục; popup báo thuật ngữ dịch sai và ký hiệu bị mất.
@@ -73,7 +75,7 @@ Glossary vẫn là các file CSV (xem dưới).
 ## Chạy
 
 ```powershell
-.\build\release\bin\pdfread.exe [file.pdf] [--page N] [--zoom 150 | --fit-page] [--timing] [--verbose]
+.\build\release\bin\HUSTpdf.exe [file.pdf] [--page N] [--zoom 150 | --fit-page] [--timing] [--verbose]
                                 [--model file.gguf] [--threads N] [--repack] [--gen-prompt]
                                 [--no-cache] [--db file.db]
 ```
@@ -106,15 +108,15 @@ Công cụ kiểm thử:
 .\build\debug\bin\make_sample_pdf.exe nuclear.pdf --text tools\eval\nuclear_sample.txt   # dàn trang file văn bản
 # Nhập lại từ điển Markdown vào glossary (giữ các mục khác của file CSV):
 python tools\dict\import_md_dictionary.py Tu_dien_Ky_thuat_Hat_nhan.md data\glossary\physics.nuclear.csv --report
-.\build\debug\bin\pdfread.exe sample.pdf --snapshot out.png   # chờ render xong, chụp cửa sổ, thoát
+.\build\debug\bin\HUSTpdf.exe sample.pdf --snapshot out.png   # chờ render xong, chụp cửa sổ, thoát
 # Đặt sẵn vùng chọn (trang từ 1, tọa độ point từ góc trên-trái trang; đơn vị c/w/l):
-.\build\debug\bin\pdfread.exe sample.pdf --select 1:72,150:300,200 --snapshot out.png
-.\build\debug\bin\pdfread.exe sample.pdf --select 1:72,640:2:200,120 --snapshot out.png   # qua 2 trang
+.\build\debug\bin\HUSTpdf.exe sample.pdf --select 1:72,150:300,200 --snapshot out.png
+.\build\debug\bin\HUSTpdf.exe sample.pdf --select 1:72,640:2:200,120 --snapshot out.png   # qua 2 trang
 # Dịch thử không cần giao diện (stdin: mỗi dòng một câu):
 .\build\release\bin\pdfread-translate.exe --model models\HY-MT1.5-1.8B-Q4_K_M.gguf "The kernel schedules threads."
 .\build\release\bin\pdfread-translate.exe --model ... --context "câu xung quanh" --term "stress=ứng suất" "..."
-.\build\release\bin\pdfread.exe sample.pdf --glossary --snapshot out.png   # mở sẵn cửa sổ glossary
-.\build\release\bin\pdfread.exe sample.pdf --model-window --snapshot out.png   # mở sẵn cửa sổ "Mô hình dịch"
+.\build\release\bin\HUSTpdf.exe sample.pdf --glossary --snapshot out.png   # mở sẵn cửa sổ glossary
+.\build\release\bin\HUSTpdf.exe sample.pdf --model-window --snapshot out.png   # mở sẵn cửa sổ "Mô hình dịch"
 # Test với mô hình thật / cần mạng (mặc định bị ẩn; "[network]" tải tiếp 4 MB cuối của mô hình từ Hugging Face):
 $env:PDFREAD_TEST_MODEL = "models\HY-MT1.5-1.8B-Q4_K_M.gguf"; .\build\release\bin\pdfread_tests.exe "[model]"; .\build\release\bin\pdfread_tests.exe "[network]"
 ```
@@ -132,10 +134,10 @@ CSV vào (UTF-8, có tiêu đề): `en, domain, context, reference` (domain = id
 ## Đóng gói và phát hành
 
 ```powershell
-.\tools\package.ps1 [-Build] [-Tools]     # -> dist\Pdfread-<phiên bản>-win64\ và .zip
+.\tools\package.ps1 [-Build] [-Tools]     # -> dist\HUSTpdf-<phiên bản>-win64\ và .zip
 ```
 
-Gói chạy không cần cài đặt: `pdfread.exe`, DLL llama.cpp/ggml, Visual C++ runtime (`vcruntime140*.dll`, `msvcp140.dll`, chép app-local nên không cần cài VC Redist), `data/`, `LICENSE.txt`, `THIRD_PARTY_NOTICES.md`, `licenses/` (giấy phép từng thư viện). Không kèm mô hình. `-Tools` thêm `pdfread-translate.exe`, `pdfread-eval.exe`.
+Gói chạy không cần cài đặt: `HUSTpdf.exe`, DLL llama.cpp/ggml, Visual C++ runtime (`vcruntime140*.dll`, `msvcp140.dll`, chép app-local nên không cần cài VC Redist), `data/`, `LICENSE.txt`, `THIRD_PARTY_NOTICES.md`, `licenses/` (giấy phép từng thư viện). Không kèm mô hình. `-Tools` thêm `pdfread-translate.exe`, `pdfread-eval.exe`.
 
 GitHub Actions (`.github/workflows/ci.yml`): mỗi push/PR build + chạy test bản release trên Windows, đóng gói và đính kèm zip vào artifact; push tag `v*` thì tạo GitHub Release kèm zip. vcpkg cố định theo `builtin-baseline`, có cache binary (lần đầu ~20 phút).
 

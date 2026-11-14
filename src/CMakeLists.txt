@@ -139,6 +139,15 @@ target_compile_definitions(pdfread PRIVATE
     PDFREAD_SOURCE_DATA_DIR="${PROJECT_SOURCE_DIR}/data"
 )
 target_link_libraries(pdfread PRIVATE pdfread_ui nfd::nfd pdfread_options)
+# Tên hiển thị của app: HUSTpdf (file chạy HUSTpdf.exe); tên target nội bộ vẫn là pdfread.
+set_target_properties(pdfread PROPERTIES OUTPUT_NAME HUSTpdf)
+if(WIN32)
+    # Icon (res/HUSTpdf.ico) + thông tin phiên bản của file exe.
+    configure_file(app/app.rc.in ${CMAKE_CURRENT_BINARY_DIR}/app.rc @ONLY)
+    target_sources(pdfread PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/app.rc)
+    set_property(SOURCE ${CMAKE_CURRENT_BINARY_DIR}/app.rc APPEND PROPERTY OBJECT_DEPENDS
+                 ${PROJECT_SOURCE_DIR}/res/HUSTpdf.ico)
+endif()
 
 # Release: ứng dụng GUI (không mở cửa sổ console). Debug giữ console để xem log.
 if(WIN32)

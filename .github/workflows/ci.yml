@@ -65,7 +65,7 @@ jobs:
       - name: Upload package
         uses: actions/upload-artifact@v4
         with:
-          name: Pdfread-win64
+          name: HUSTpdf-win64
           path: dist/*.zip
           if-no-files-found: error
 
@@ -76,5 +76,5 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $zip = (Get-ChildItem dist\*.zip | Select-Object -First 1).FullName
-          gh release create "${{ github.ref_name }}" "$zip" --title "Pdfread ${{ github.ref_name }}" --generate-notes `
+          gh release create "${{ github.ref_name }}" "$zip" --title "HUSTpdf ${{ github.ref_name }}" --generate-notes `
             --notes "Bản Windows 64-bit, chạy không cần cài đặt. Mô hình dịch không đi kèm: lần chạy đầu app hướng dẫn tải HY-MT1.5-1.8B (1,13 GB) từ Hugging Face hoặc chọn file GGUF có sẵn."

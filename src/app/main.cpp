@@ -1,10 +1,10 @@
 // Điểm vào: khởi tạo GLFW, OpenGL 3.3 core, Dear ImGui, NFD và MuPDF rồi chạy App.
 //
 // Tham số dòng lệnh:
-//   pdfread [file.pdf] [--page N] [--zoom 150 | --fit-page] [--timing] [--verbose]
+//   HUSTpdf [file.pdf] [--page N] [--zoom 150 | --fit-page] [--timing] [--verbose]
 //           [--model file.gguf] [--threads N] [--gen-prompt] [--repack] [--context]
-//           [--no-cache] [--db file.db]
-//   pdfread file.pdf --snapshot out.png   (kiểm thử: chờ render xong, chụp cửa sổ, thoát)
+//           [--no-cache] [--db file.db] [--debug-frames]
+//   HUSTpdf file.pdf --snapshot out.png   (kiểm thử: chờ render xong, chụp cửa sổ, thoát)
 
 #include <charconv>
 #include <cstdio>
@@ -121,7 +121,7 @@ int run(const std::vector<std::string>& args) {
             return i + 1 < args.size() ? args[++i] : empty;
         };
         if (a == "--version") {
-            std::printf("pdfread %s\n", PDFREAD_VERSION);
+            std::printf("HUSTpdf %s\n", PDFREAD_VERSION);
             return 0;
         } else if (a == "--verbose") {
             log::set_level(log::Level::Debug);
@@ -165,6 +165,8 @@ int run(const std::vector<std::string>& args) {
             log::warn("Bỏ qua tham số không rõ: {}", a);
         }
     }
+    // Đổi tên Pdfread -> HUSTpdf: chuyển thư mục dữ liệu cũ (glossary, cache, cài đặt, mô hình đã tải).
+    for (const std::string& m : migrate_legacy_data_dirs()) log::info("{}", m);
     options.data_dir = find_data_dir();
     options.font_dir = options.data_dir / "fonts";
     options.model_download_dir = local_data_dir() / "models";
@@ -182,7 +184,7 @@ int run(const std::vector<std::string>& args) {
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
     glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_TRUE);
-    GLFWwindow* window = glfwCreateWindow(1200, 860, "Pdfread", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow(1200, 860, "HUSTpdf", nullptr, nullptr);
     if (window == nullptr) {
         glfwTerminate();
         return 1;

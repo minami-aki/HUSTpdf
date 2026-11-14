@@ -48,6 +48,16 @@ App* app_from(GLFWwindow* window) { return static_cast<App*>(glfwGetWindowUserPo
 
 std::string file_name_utf8(const std::filesystem::path& p) { return path_to_utf8(p.filename()); }
 
+// Đường dẫn đã lưu nằm trong thư mục dữ liệu tên cũ (Pdfread) -> trỏ sang thư mục mới (HUSTpdf).
+std::filesystem::path remap_legacy_path(const std::string& saved) {
+    const std::string legacy = path_to_utf8(legacy_local_data_dir());
+    if (saved.size() > legacy.size() && saved.compare(0, legacy.size(), legacy) == 0 &&
+        (saved[legacy.size()] == '\\' || saved[legacy.size()] == '/')) {
+        return local_data_dir() / path_from_utf8(saved.substr(legacy.size() + 1));
+    }
+    return path_from_utf8(saved);
+}
+
 }  // namespace
 
 App::App(GLFWwindow* window, const pdf::RootContext& root, AppOptions options)
@@ -122,7 +132,8 @@ App::App(GLFWwindow* window, const pdf::RootContext& root, AppOptions options)
     if (model.empty() && store_) {
         if (const auto saved = store_->get("model.path")) {
             std::error_code ec;
-            if (std::filesystem::is_regular_file(path_from_utf8(*saved), ec)) model = path_from_utf8(*saved);
+            const std::filesystem::path p = remap_legacy_path(*saved);
+            if (std::filesystem::is_regular_file(p, ec)) model = p;
         }
     }
     if (model.empty()) model = find_default_model();
@@ -948,7 +959,7 @@ void App::poll_open_results() {
             log::info("Lĩnh vực:{}", summary.empty() ? " chưa xác định" : summary);
             start_term_extraction(r.doc, r.ticket);
         }
-        glfwSetWindowTitle(window_, std::format("{} — Pdfread", file_name_utf8(r.path)).c_str());
+        glfwSetWindowTitle(window_, std::format("{} — HUSTpdf", file_name_utf8(r.path)).c_str());
         bool explicit_page = false;
         if (!initial_view_applied_) {
             initial_view_applied_ = true;

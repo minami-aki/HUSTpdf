@@ -2,7 +2,7 @@
 // Quản lý các glossary đang dùng và dựng chỉ mục theo lĩnh vực của tài liệu đang mở.
 //
 //  - Glossary lĩnh vực: data/glossary/<id>.csv (chỉ đọc; sửa thì ghi vào glossary người dùng).
-//  - Glossary người dùng: %APPDATA%/Pdfread/glossary/user.csv (ưu tiên cao nhất).
+//  - Glossary người dùng: %APPDATA%/HUSTpdf/glossary/user.csv (ưu tiên cao nhất).
 //  - Glossary tài liệu: "<tên file>.glossary.csv" đặt cạnh PDF.
 // Mọi file được đọc vào bộ nhớ; refresh() đọc lại file nào đã đổi (theo thời điểm sửa).
 // Chỉ dùng trên một luồng (UI).

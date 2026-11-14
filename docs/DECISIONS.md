@@ -158,6 +158,13 @@ Tập `tools/eval/nuclear.csv` (40 câu hạt nhân – nguyên tử, có ngữ 
 - Sửa: Viewer báo `has_blank_tiles()` (tile hiển thị chưa có và không có tile tỉ lệ khác để vẽ tạm). Nếu khung đang hiển thị đầy đủ mà khung mới lộ nền trắng thì không swap — giữ khung cũ tối đa 100 ms (chờ bằng `glfwWaitEventsTimeout(4 ms)`, không quay vòng); đang cuộn liên tục (khung trước cũng thiếu) thì vẫn hiển thị. Đo lại (End/Home/PageDown trên Lamarsh): 2 khung trống đều được giữ, 0 khung trắng lên màn hình; CPU đứng yên vẫn 0 ms/10 s.
 - Các tham số thử nghiệm `--linger`, `--vsync` (giả thuyết tần số quét thay đổi) đã gỡ; giữ `--debug-frames` để chẩn đoán.
 
+## 2026-11-14 — đổi tên app thành HUSTpdf, icon logo Bách khoa
+
+- Tên hiển thị: cửa sổ "HUSTpdf", file chạy `HUSTpdf.exe` (target CMake vẫn là `pdfread`), thông tin phiên bản trong exe (`src/app/app.rc.in`), gói `HUSTpdf-<ver>-win64.zip`, artifact/release CI. Giữ nguyên tên nội bộ: namespace `pdfread`, tên repo, `vcpkg.json`, các công cụ phát triển `pdfread-translate`, `pdfread-eval`, file `pdfread.db`.
+- Icon: người dùng cung cấp `HUST.ico` (một ảnh PNG 256×256). `tools/make_icon.ps1` (System.Drawing của .NET, không thêm thư viện) giữ nguyên ảnh 256 px và thêm các cỡ 16–128 px thu nhỏ bicubic -> `res/HUSTpdf.ico` (9 cỡ). Nhúng vào exe với tên tài nguyên `GLFW_ICON`, GLFW tự dùng cho cửa sổ và thanh tác vụ.
+- Thư mục dữ liệu `%APPDATA%\Pdfread`, `%LOCALAPPDATA%\Pdfread` -> `…\HUSTpdf`; lần chạy đầu đổi tên thư mục cũ sang mới nếu thư mục mới chưa có (`migrate_legacy_data_dirs`), đường dẫn mô hình đã lưu nằm trong thư mục cũ được trỏ sang thư mục mới.
+- Lưu ý khi thử nghiệm: app Claude chạy dạng gói MSIX nên tiến trình khởi chạy từ đó ghi AppData vào bản ảo (`%LOCALAPPDATA%\Packages\Claude_…\LocalCache\Local`); việc chuyển thư mục thật chỉ xảy ra khi người dùng tự mở app.
+
 ## Thông tin tham chiếu
 
 - vcpkg baseline: `177e8175121536d414f405ed8b3099b325a42638` (2026-11-11).

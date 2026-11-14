@@ -1,5 +1,5 @@
 #pragma once
-// Kho dữ liệu SQLite của app (một file, mặc định %LOCALAPPDATA%\Pdfread\pdfread.db):
+// Kho dữ liệu SQLite của app (một file, mặc định %LOCALAPPDATA%\HUSTpdf\pdfread.db):
 //
 //  - settings     : cài đặt dạng khóa -> giá trị (đường dẫn mô hình, số luồng…);
 //  - translations : cache bản dịch. Khóa = SHA-256 của (prompt gửi mô hình — đã gồm câu

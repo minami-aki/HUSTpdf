@@ -1,6 +1,6 @@
 # Thông báo giấy phép bên thứ ba
 
-Pdfread phát hành theo AGPL-3.0. Dự án dùng các thành phần dưới đây. Bản phát hành (`tools/package.ps1`) chép kèm văn bản giấy phép đầy đủ của từng thành phần vào thư mục `licenses/` (lấy từ file `copyright` của vcpkg, `third_party/llama.cpp/LICENSE`, `data/fonts/OFL.txt`).
+HUSTpdf (tên cũ: Pdfread) phát hành theo AGPL-3.0. Dự án dùng các thành phần dưới đây. Bản phát hành (`tools/package.ps1`) chép kèm văn bản giấy phép đầy đủ của từng thành phần vào thư mục `licenses/` (lấy từ file `copyright` của vcpkg, `third_party/llama.cpp/LICENSE`, `data/fonts/OFL.txt`).
 
 | Thành phần | Giấy phép | Dùng ở |
 |---|---|---|
@@ -26,6 +26,8 @@ Pdfread phát hành theo AGPL-3.0. Dự án dùng các thành phần dưới đ�
 | Catch2 v3 | BSL-1.0 | chỉ dùng cho unit test, không vào bản phát hành |
 
 ## Dữ liệu
+
+- Biểu tượng `res/HUSTpdf.ico` (nhúng vào `HUSTpdf.exe`): logo Đại học Bách khoa Hà Nội, do chủ dự án cung cấp; các cỡ 16–128 px thu nhỏ từ ảnh 256 px gốc bằng `tools/make_icon.ps1`. Logo không thuộc phạm vi giấy phép AGPL-3.0 của mã nguồn; quyền đối với logo thuộc về nhà trường.
 
 - `data/domains.json`, `data/glossary/*.csv` (`source=draft`): bản nháp của dự án, cùng giấy phép AGPL-3.0.
 - `data/glossary/physics.nuclear.csv`, các mục `source=dict`: nhập từ *Từ điển chuyên ngành Vật lý & Kỹ thuật hạt nhân tổng hợp (Anh – Việt)* do chủ dự án cung cấp để phát hành cùng app. Giá trị số trong phần giải thích mang tính tham khảo.

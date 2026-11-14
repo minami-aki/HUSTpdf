@@ -3,7 +3,7 @@
     Build a portable Windows release folder + zip (no model file).
     (ASCII only: Windows PowerShell 5.1 reads BOM-less scripts as ANSI.)
 
-    Contents: pdfread.exe, llama/ggml DLLs (one ggml-cpu-* per CPU variant), the Visual C++
+    Contents: HUSTpdf.exe, llama/ggml DLLs (one ggml-cpu-* per CPU variant), the Visual C++
     runtime DLLs needed by the /MD llama/ggml DLLs (app-local), data/ (fonts, domains,
     glossaries), LICENSE, THIRD_PARTY_NOTICES.md, README.md and licenses/ (license text of
     every bundled third-party component).
@@ -44,17 +44,17 @@ if ($Build) {
 }
 
 $bin = Join-Path $root "build\$Preset\bin"
-if (-not (Test-Path (Join-Path $bin 'pdfread.exe'))) { throw "pdfread.exe not found in $bin (build first or pass -Build)." }
+if (-not (Test-Path (Join-Path $bin 'HUSTpdf.exe'))) { throw "HUSTpdf.exe not found in $bin (build first or pass -Build)." }
 
 $version = (Get-Content (Join-Path $root 'vcpkg.json') -Raw | ConvertFrom-Json).version
-$name = "Pdfread-$version-win64"
+$name = "HUSTpdf-$version-win64"
 $out = Join-Path $root $OutDir
 $stage = Join-Path $out $name
 if (Test-Path $stage) { Remove-Item -Recurse -Force $stage }
 New-Item -ItemType Directory -Force (Join-Path $stage 'licenses') | Out-Null
 
 # 1. Executables and llama/ggml DLLs.
-$exes = @('pdfread.exe')
+$exes = @('HUSTpdf.exe')
 if ($Tools) { $exes += @('pdfread-translate.exe', 'pdfread-eval.exe') }
 foreach ($e in $exes) { Copy-Item (Join-Path $bin $e) $stage }
 Get-ChildItem $bin -File -Filter '*.dll' | Where-Object { $_.Name -eq 'llama.dll' -or $_.Name -like 'ggml*.dll' } |
