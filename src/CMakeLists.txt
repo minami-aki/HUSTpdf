@@ -67,6 +67,7 @@ target_link_libraries(pdfread_pdf
 
 # --- translate: interface Translator, backend llama.cpp, luồng suy luận ------
 add_library(pdfread_translate STATIC
+    translate/backend.cpp
     translate/llama_translator.cpp
     translate/prompt.cpp
     translate/translation_service.cpp

@@ -31,6 +31,18 @@ if (-not (Get-Command cl.exe -ErrorAction SilentlyContinue)) {
 
 if (-not $env:VCPKG_ROOT) { throw 'VCPKG_ROOT environment variable is not set.' }
 
+# GPU toolkits (M8): installers set these machine-wide; shells opened before the install
+# do not see them yet.
+foreach ($name in 'VULKAN_SDK', 'CUDA_PATH') {
+    if (-not (Get-Item "env:$name" -ErrorAction SilentlyContinue)) {
+        $value = [Environment]::GetEnvironmentVariable($name, 'Machine')
+        if ($value) { Set-Item -Path "env:$name" -Value $value }
+    }
+}
+if ($env:CUDA_PATH -and -not $env:CUDACXX -and (Test-Path "$env:CUDA_PATH\bin\nvcc.exe")) {
+    $env:CUDACXX = "$env:CUDA_PATH\bin\nvcc.exe"
+}
+
 cmake --preset $Preset
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 

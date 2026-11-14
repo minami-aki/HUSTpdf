@@ -18,7 +18,9 @@ HUSTpdf (tên cũ: Pdfread) phát hành theo AGPL-3.0. Dự án dùng các thàn
 | Dear ImGui 1.93 | MIT | giao diện |
 | nativefiledialog-extended 1.4 | zlib | hộp thoại mở file |
 | Noto Sans, Noto Sans Math (`data/fonts`, kèm `OFL.txt`) | SIL OFL-1.1 | font giao diện |
-| llama.cpp / ggml (v0.9.0) | MIT | suy luận mô hình dịch (DLL cạnh exe) |
+| llama.cpp / ggml (v0.9.0) | MIT | suy luận mô hình dịch (DLL cạnh exe), gồm backend `ggml-vulkan.dll` |
+| Vulkan-Headers (biên dịch vào `ggml-vulkan.dll`, từ Vulkan SDK) | Apache-2.0 / MIT | backend GPU Vulkan; lúc chạy dùng `vulkan-1.dll` của driver GPU, không chép kèm |
+| NVIDIA CUDA runtime, cuBLAS (`cudart64_*.dll`, `cublas64_*.dll`, `cublasLt64_*.dll`) | NVIDIA CUDA Toolkit EULA (Attachment A, phân phối lại) | **chỉ trong gói bổ sung CUDA** (`HUSTpdf-…-cuda.zip`), kèm `licenses/NVIDIA-CUDA-EULA.txt`; gói chính không có |
 | nlohmann/json 3.12 | MIT | đọc `data/domains.json` |
 | SQLite 3.54 | Public domain | cài đặt, cache bản dịch, thông tin tài liệu |
 | libcurl 8.23 (TLS qua Schannel của Windows) | curl (MIT-like) | tải mô hình lần đầu |

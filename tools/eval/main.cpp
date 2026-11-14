@@ -169,6 +169,8 @@ int main(int argc, char** argv) {
         else if (a == "--data") data_dir = path_from_utf8(next());
         else if (a == "--configs") configs = next();
         else if (a == "--threads") config.threads = std::atoi(next().c_str());
+        else if (a == "--backend") config.backend = translate::backend_from_key(next()).value_or(translate::Backend::Auto);
+        else if (a == "--device") config.device = next();
         else if (a == "--limit") limit = static_cast<std::size_t>(std::atoi(next().c_str()));
         else if (a == "--quantity-placeholders") protect_options.quantities = true;
         else if (a == "--verbose") log::set_level(log::Level::Debug);

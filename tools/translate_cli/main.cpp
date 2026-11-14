@@ -2,6 +2,8 @@
 //
 //   pdfread_translate --model models/HY-MT1.5-1.8B-Q4_K_M.gguf [--threads N] [--gen-prompt]
 //                     [--context "câu xung quanh"] [--term "en=vi"]... "câu tiếng Anh"
+//                     [--backend auto|cpu|vulkan|cuda] [--device "tên GPU"]
+//   pdfread_translate --list-devices        # liệt kê GPU dùng được (Vulkan / CUDA)
 //
 // Không truyền câu thì đọc từng dòng từ stdin. Kết quả in ra stdout (UTF-8), số liệu ra stderr.
 
@@ -32,7 +34,8 @@ int main(int argc, char** argv) {
     translate::ModelConfig config;
     translate::TranslateRequest base;
     std::vector<std::string> inputs;
-    bool raw = false;  // --raw: gửi nguyên văn làm tin nhắn user (thử mẫu prompt khác); "\n" trong tham số = xuống dòng
+    bool raw = false;
+    bool list_devices = false;  // --raw: gửi nguyên văn làm tin nhắn user (thử mẫu prompt khác); "\n" trong tham số = xuống dòng
     const std::vector<std::string> args = utf8_args(argc, argv);
     const std::size_t nargs = args.size();
     for (std::size_t i = 1; i < nargs; ++i) {
@@ -51,7 +54,25 @@ int main(int argc, char** argv) {
             if (eq != std::string::npos) base.terms.push_back({t.substr(0, eq), t.substr(eq + 1), false});
         } else if (a == "--verbose") log::set_level(log::Level::Debug);
         else if (a == "--raw") raw = true;
+        else if (a == "--backend") {
+            const auto b = translate::backend_from_key(next());
+            if (!b) {
+                std::fprintf(stderr, "--backend: auto | cpu | vulkan | cuda\n");
+                return 1;
+            }
+            config.backend = *b;
+        } else if (a == "--device") config.device = next();
+        else if (a == "--list-devices") list_devices = true;
         else inputs.push_back(a);
+    }
+    if (list_devices) {
+        const auto devices = translate::LlamaTranslator::probe_devices();
+        for (const auto& d : devices) {
+            std::printf("%s\t%s\t%s\n", d.name.c_str(), std::string(translate::backend_key(d.backend)).c_str(),
+                        translate::device_label(d).c_str());
+        }
+        if (devices.empty()) std::printf("(không có GPU dùng được)\n");
+        return 0;
     }
     if (config.model_path.empty()) {
         std::fprintf(stderr, "usage: pdfread_translate --model <file.gguf> [options] [text]\n");

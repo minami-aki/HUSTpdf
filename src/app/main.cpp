@@ -3,7 +3,8 @@
 // Tham số dòng lệnh:
 //   HUSTpdf [file.pdf] [--page N] [--zoom 150 | --fit-page] [--timing] [--verbose]
 //           [--model file.gguf] [--threads N] [--gen-prompt] [--repack] [--context]
-//           [--no-cache] [--db file.db] [--debug-frames]
+//           [--backend auto|cpu|vulkan|cuda] [--device "tên GPU"]
+//           [--no-cache] [--db file.db] [--debug-frames] [--record-frames dir]
 //   HUSTpdf file.pdf --snapshot out.png   (kiểm thử: chờ render xong, chụp cửa sổ, thoát)
 
 #include <charconv>
@@ -137,6 +138,12 @@ int run(const std::vector<std::string>& args) {
             options.fit_page = true;
         } else if (a == "--model") {
             options.model_path = path_from_utf8(next());
+        } else if (a == "--backend") {
+            const std::string v = next();
+            options.backend = pdfread::translate::backend_from_key(v);
+            if (!options.backend) std::fprintf(stderr, "--backend: auto | cpu | vulkan | cuda\n");
+        } else if (a == "--device") {
+            options.device = next();
         } else if (a == "--threads") {
             options.threads = std::max(0, std::atoi(next().c_str()));
         } else if (a == "--gen-prompt") {
@@ -162,6 +169,9 @@ int run(const std::vector<std::string>& args) {
             options.sidebar = next();
         } else if (a == "--debug-frames") {
             options.debug_frames = true;
+        } else if (a == "--record-frames") {
+            options.debug_frames = true;
+            options.record_dir = path_from_utf8(next());
         } else if (a == "--model-window") {
             options.open_model_window = true;
         } else if (a == "--context") {

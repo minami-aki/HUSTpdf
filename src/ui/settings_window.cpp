@@ -1,5 +1,7 @@
 #include "ui/settings_window.hpp"
 
+#include <algorithm>
+
 #include <imgui.h>
 
 namespace pdfread::ui {
@@ -30,7 +32,10 @@ SettingsWindow::Result SettingsWindow::draw(State& state, ModelWindow& model, co
                                             float ui_scale) {
     Result result;
     if (!open) return result;
-    ImGui::SetNextWindowSize(ImVec2(660 * ui_scale, 0), ImGuiCond_Appearing);
+    // Chiều cao cố định (tối đa 85% cửa sổ): tab "Mô hình dịch" dài, chiều cao tự co theo tab
+    // đầu tiên thì phần thiết bị suy luận bị khuất.
+    const float max_h = ImGui::GetMainViewport()->WorkSize.y * 0.85f;
+    ImGui::SetNextWindowSize(ImVec2(660 * ui_scale, std::min(600 * ui_scale, max_h)), ImGuiCond_Appearing);
     ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
     if (!ImGui::Begin("Cài đặt", &open, ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse)) {
         ImGui::End();

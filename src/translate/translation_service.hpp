@@ -35,6 +35,7 @@ struct TranslationEvent {
         Done,          // stats
         Cancelled,
         Failed,        // text: thông báo lỗi
+        DevicesListed, // đã dò xong GPU (devices())
     };
     Kind kind = Kind::Token;
     std::uint64_t request_id = 0;
@@ -43,10 +44,12 @@ struct TranslationEvent {
 };
 
 using TranslatorFactory = std::function<std::unique_ptr<Translator>(const ModelConfig&)>;
+// Dò GPU (nạp DLL backend GPU): chạy trên luồng suy luận vì chậm.
+using DeviceProber = std::function<std::vector<GpuDevice>()>;
 
 class TranslationService {
 public:
-    TranslationService(TranslatorFactory factory, std::function<void()> wake);
+    TranslationService(TranslatorFactory factory, std::function<void()> wake, DeviceProber prober = {});
     ~TranslationService();
 
     TranslationService(const TranslationService&) = delete;
@@ -62,6 +65,14 @@ public:
     [[nodiscard]] std::vector<TranslationEvent> take_events() { return events_.drain(); }
     [[nodiscard]] ModelState model_state() const noexcept { return state_.load(); }
     [[nodiscard]] std::string model_name() const;
+    // Thiết bị mô hình đang chạy ("CPU", "Vulkan · …"); rỗng khi chưa nạp.
+    [[nodiscard]] std::string device_name() const;
+
+    // Dò GPU ở nền (một lần là đủ; gọi lại thì dò lại). Xong: sự kiện DevicesListed.
+    void probe_devices();
+    [[nodiscard]] bool devices_probed() const;
+    [[nodiscard]] bool probing_devices() const;
+    [[nodiscard]] std::vector<GpuDevice> devices() const;
 
 private:
     struct Job {
@@ -77,6 +88,7 @@ private:
 
     TranslatorFactory factory_;
     std::function<void()> wake_;
+    DeviceProber prober_;
     ConcurrentQueue<TranslationEvent> events_;
     std::atomic<ModelState> state_{ModelState::None};
 
@@ -87,6 +99,11 @@ private:
     std::shared_ptr<std::atomic<bool>> running_cancel_;  // cờ hủy của yêu cầu đang chạy
     std::uint64_t next_id_ = 1;
     std::string model_name_;
+    std::string device_name_;
+    bool pending_probe_ = false;
+    bool probing_ = false;
+    bool probed_ = false;
+    std::vector<GpuDevice> devices_;
     bool stop_ = false;
 
     std::unique_ptr<Translator> translator_;  // chỉ luồng suy luận chạm vào

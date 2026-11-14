@@ -208,3 +208,41 @@ TEST_CASE("LlamaTranslator translates a technical sentence", "[.model]") {
     CHECK(stats.output_tokens > 3);
     CHECK(pdfread::utf8_length(out) < 400);  // dừng đúng lúc, không lan man
 }
+
+TEST_CASE("TranslationService probes GPUs in the background and reports the device", "[translate][service]") {
+    Collector c;
+    std::atomic<int> probes{0};
+    TranslationService s(fake_factory(1ms), [&] { c.wake(); }, [&] {
+        ++probes;
+        std::this_thread::sleep_for(20ms);
+        return std::vector<GpuDevice>{{.backend = Backend::Vulkan, .name = "Vulkan0", .description = "GPU A"}};
+    });
+    CHECK_FALSE(s.devices_probed());
+    s.probe_devices();
+    CHECK(s.probing_devices());
+    s.probe_devices();  // đang dò: không xếp thêm lượt
+    REQUIRE(c.wait(s, [&] {
+        for (const auto& e : c.events) {
+            if (e.kind == Kind::DevicesListed) return true;
+        }
+        return false;
+    }));
+    CHECK(probes == 1);
+    CHECK(s.devices_probed());
+    CHECK_FALSE(s.probing_devices());
+    REQUIRE(s.devices().size() == 1);
+    CHECK(s.devices()[0].description == "GPU A");
+
+    s.load_model({.model_path = "fake.gguf"});
+    REQUIRE(c.wait(s, [&] { return s.model_state() == ModelState::Ready; }));
+    CHECK(s.device_name() == "CPU");  // FakeTranslator dùng device() mặc định
+}
+
+TEST_CASE("TranslationService without a prober ignores probe requests", "[translate][service]") {
+    Collector c;
+    TranslationService s(fake_factory(1ms), [&] { c.wake(); });
+    s.probe_devices();
+    CHECK_FALSE(s.probing_devices());
+    CHECK_FALSE(s.devices_probed());
+    CHECK(s.device_name().empty());
+}

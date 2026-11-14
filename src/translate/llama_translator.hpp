@@ -4,6 +4,7 @@
 
 #include <atomic>
 #include <string>
+#include <vector>
 
 #include "translate/translator.hpp"
 
@@ -26,12 +27,17 @@ public:
     [[nodiscard]] bool supports_glossary() const override { return true; }
     [[nodiscard]] bool supports_context() const override { return true; }
     [[nodiscard]] std::string name() const override { return name_; }
+    [[nodiscard]] std::string device() const override { return device_; }
 
     bool translate(const TranslateRequest& request, const std::function<void(std::string_view)>& on_token,
                    const std::atomic<bool>& cancel, TranslationStats* stats) override;
 
     // Số luồng suy luận mặc định: số nhân vật lý ước tính (luồng phần cứng / 2), tối đa 8.
     [[nodiscard]] static int default_threads() noexcept;
+
+    // Nạp mọi DLL backend GPU đã cài (Vulkan, CUDA) và liệt kê GPU. Chậm (khởi tạo driver,
+    // có thể đánh thức GPU rời): chỉ gọi trên luồng nền.
+    [[nodiscard]] static std::vector<GpuDevice> probe_devices();
 
     // Tham số sinh theo model card.
     static constexpr int kTopK = 20;
@@ -42,9 +48,13 @@ public:
 
 private:
     static bool abort_callback(void* data);
+    // Nạp mô hình + ngữ cảnh trên `gpu` (nullptr = chỉ CPU). Lỗi: dọn dẹp, trả thông báo.
+    std::string try_load(void* gpu);
+    void warm_up();
 
     ModelConfig config_;
     std::string name_;
+    std::string device_ = "CPU";
     llama_model* model_ = nullptr;
     llama_context* ctx_ = nullptr;
     llama_sampler* sampler_ = nullptr;

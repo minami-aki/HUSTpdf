@@ -9,6 +9,8 @@
 #include <string_view>
 #include <vector>
 
+#include "translate/backend.hpp"
+
 namespace pdfread::translate {
 
 struct GlossaryEntry {
@@ -56,6 +58,9 @@ struct ModelConfig {
     // bật = 1208 MB RAM riêng, 20,6 token/s, token đầu 311 ms; tắt = 495 MB, 22,0 token/s, 404 ms.
     // Mặc định tắt (ưu tiên nhẹ).
     bool repack_weights = false;
+    // Thiết bị suy luận (M8). GPU lỗi khi nạp thì tự quay về CPU.
+    Backend backend = Backend::Auto;
+    std::string device;  // description của GPU ưa dùng (Vulkan/Cuda); rỗng = tự chọn
 };
 
 class TranslateError : public std::runtime_error {
@@ -71,6 +76,8 @@ public:
     [[nodiscard]] virtual bool supports_context() const = 0;
     // Tên mô hình (dùng cho khóa cache bản dịch).
     [[nodiscard]] virtual std::string name() const = 0;
+    // Thiết bị đang chạy, để hiển thị: "CPU", "Vulkan · NVIDIA GeForce RTX 3050…".
+    [[nodiscard]] virtual std::string device() const { return "CPU"; }
 
     // Dịch, gọi on_token cho mỗi đoạn kết quả (UTF-8 trọn ký tự). Trả false nếu bị hủy
     // (cancel chuyển thành true). Ném TranslateError khi lỗi.

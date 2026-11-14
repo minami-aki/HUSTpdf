@@ -18,6 +18,7 @@ Trình đọc PDF khoa học – kỹ thuật, dịch Anh → Việt tức thờ
 | M5 | Tầng 1: lĩnh vực, glossary, placeholder, hậu kiểm | xong (glossary 37 lĩnh vực là bản nháp, cần duyệt) |
 | M6 | Cache SQLite, tải mô hình, đánh giá, CI, đóng gói | xong (CI chạy khi repo có remote GitHub) |
 | M7 | Mục lục, link, Quay lại/Tiến tới, dấu trang, tìm kiếm (cả tiếng Việt), chế độ màu trang, cửa sổ Cài đặt | xong |
+| M8 | Dịch bằng GPU: Vulkan, CUDA (gói bổ sung), chọn thiết bị trong Cài đặt, tự quay về CPU | xong |
 
 ## Build (Windows)
 
@@ -48,7 +49,24 @@ Không đóng gói kèm. Lần chạy đầu (chưa có mô hình) app mở cử
 - **Tải từ Hugging Face**: `HY-MT1.5-1.8B-Q4_K_M.gguf` (1,13 GB) từ [tencent/HY-MT1.5-1.8B-GGUF](https://huggingface.co/tencent/HY-MT1.5-1.8B-GGUF). App hiện giấy phép Tencent HY Community License, chỉ tải khi bạn đồng ý; lưu vào `%LOCALAPPDATA%\HUSTpdf\models\` (kèm `HY-MT1.5-License.txt`), có thanh tiến trình, tạm dừng / tải tiếp (HTTP Range, kể cả sau khi thoát app), tự thử lại khi rớt mạng, kiểm tra SHA-256 `4383ac0c3c8e476de98ff979c2a3f069f8c4fb385e7860cf2d28da896cc477c7` trước khi dùng.
 - **Chọn file GGUF có sẵn** (máy không có mạng).
 
-Đường dẫn mô hình được lưu; sau lần đầu app không cần mạng. Thư mục tìm mô hình tự động: `%LOCALAPPDATA%\HUSTpdf\models`, `models/` cạnh `HUSTpdf.exe`, `models/` ở gốc dự án (khi phát triển; nằm trong `.gitignore`). Cửa sổ này (nút **Mô hình…**) còn chỉnh số luồng CPU và xóa cache bản dịch.
+Đường dẫn mô hình được lưu; sau lần đầu app không cần mạng. Thư mục tìm mô hình tự động: `%LOCALAPPDATA%\HUSTpdf\models`, `models/` cạnh `HUSTpdf.exe`, `models/` ở gốc dự án (khi phát triển; nằm trong `.gitignore`). Tab này (**Cài đặt… > Mô hình dịch**) còn chọn thiết bị suy luận, chỉnh số luồng CPU và xóa cache bản dịch.
+
+### Dịch bằng GPU
+
+**Cài đặt > Mô hình dịch > Thiết bị**: Tự động (mặc định) / CPU / từng GPU tìm thấy (Vulkan, CUDA).
+
+- **Tự động**: GPU rời qua CUDA nếu có gói CUDA, không thì qua Vulkan; máy chỉ có GPU tích hợp thì chạy CPU (đo trên Radeon Vega của Ryzen 5 4600H: Vulkan iGPU không nhanh hơn CPU).
+- **Vulkan** có sẵn trong gói chính, chỉ cần driver GPU (NVIDIA, AMD, Intel). **CUDA** cần gói bổ sung `HUSTpdf-…-win64-cuda.zip` (cuBLAS ~430 MB): giải nén vào cùng chỗ với gói chính (tên thư mục trùng nhau) rồi mở lại app. Chọn CUDA mà thiếu gói thì app dùng cùng GPU đó qua Vulkan.
+- GPU lỗi khi nạp mô hình (hết VRAM, driver lỗi…) thì tự chuyển về CPU; Cài đặt ghi "Đang chạy trên: …", thanh trạng thái ghi backend đang dùng.
+- Chế độ CPU không nạp DLL GPU nào (không đánh thức GPU rời). Danh sách GPU chỉ được dò khi mở tab Mô hình dịch.
+- Lần đầu dùng Vulkan sau khi cài app hoặc cập nhật driver, GPU biên dịch shader khi nạp mô hình (RTX 3050: 16–30 s, chạy nền, trạng thái "đang nạp…"); driver lưu lại nên các lần sau chỉ ~0,4 s.
+
+| RTX 3050 Laptop 4 GB / Ryzen 5 4600H, 8 câu kỹ thuật | Token đầu | Tốc độ sinh | 1 câu (~45 token ra) | RAM app sau khi nạp |
+|---|---|---|---|---|
+| CPU (6 luồng) | ~530 ms | ~14 token/s | ~3,5 s | ~340 MB |
+| Vulkan · RTX 3050 | ~36 ms | ~90 token/s | ~0,5 s | ~505 MB |
+| CUDA · RTX 3050 | ~23 ms | ~96 token/s | ~0,47 s | ~760 MB |
+| Vulkan · Radeon iGPU | ~280 ms | ~15 token/s | ~3,2 s | — |
 
 ## Cache và cài đặt
 
@@ -80,6 +98,7 @@ Glossary vẫn là các file CSV (xem dưới).
                                 [--model file.gguf] [--threads N] [--repack] [--gen-prompt]
                                 [--no-cache] [--db file.db]
                                 [--search "cụm từ"] [--reading-mode normal|sepia|dark|warm] [--sidebar]
+                                [--backend auto|cpu|vulkan|cuda] [--device "tên GPU"]
 ```
 
 | Phím / thao tác | Tác dụng |
@@ -124,6 +143,8 @@ python tools\dict\import_md_dictionary.py Tu_dien_Ky_thuat_Hat_nhan.md data\glos
 # Dịch thử không cần giao diện (stdin: mỗi dòng một câu):
 .\build\release\bin\pdfread-translate.exe --model models\HY-MT1.5-1.8B-Q4_K_M.gguf "The kernel schedules threads."
 .\build\release\bin\pdfread-translate.exe --model ... --context "câu xung quanh" --term "stress=ứng suất" "..."
+.\build\release\bin\pdfread-translate.exe --list-devices                       # GPU dùng được (Vulkan / CUDA)
+.\build\release\bin\pdfread-translate.exe --model ... --backend vulkan --device "NVIDIA GeForce RTX 3050 Laptop GPU" "..."
 .\build\release\bin\HUSTpdf.exe sample.pdf --glossary --snapshot out.png   # mở sẵn cửa sổ glossary
 .\build\release\bin\HUSTpdf.exe sample.pdf --model-window --snapshot out.png   # mở sẵn Cài đặt ở thẻ "Mô hình dịch"
 .\build\release\bin\HUSTpdf.exe book.pdf --sidebar --search "delayed neutron" --reading-mode sepia --snapshot out.png
@@ -145,8 +166,10 @@ CSV vào (UTF-8, có tiêu đề): `en, domain, context, reference` (domain = id
 ## Đóng gói và phát hành
 
 ```powershell
-.\tools\package.ps1 [-Build] [-Tools]     # -> dist\HUSTpdf-<phiên bản>-win64\ và .zip
+.\tools\package.ps1 [-Build] [-Tools]     # -> dist\HUSTpdf-<phiên bản>-win64\ và .zip (+ -cuda.zip nếu build có CUDA)
 ```
+
+Build GPU: bản Release tự bật backend Vulkan khi có [Vulkan SDK](https://vulkan.lunarg.com/) (`VULKAN_SDK`) và CUDA khi có CUDA Toolkit (`CUDA_PATH`); tắt bằng `-DPDFREAD_VULKAN=OFF` / `-DPDFREAD_CUDA=OFF`. Bản Debug không build GPU. `PDFREAD_CUDA_ARCHS` (mặc định `native` = GPU của máy build) chọn kiến trúc NVIDIA được biên dịch sẵn. CI không có hai bộ công cụ này nên chỉ build CPU.
 
 Gói chạy không cần cài đặt: `HUSTpdf.exe`, DLL llama.cpp/ggml, Visual C++ runtime (`vcruntime140*.dll`, `msvcp140.dll`, chép app-local nên không cần cài VC Redist), `data/`, `LICENSE.txt`, `THIRD_PARTY_NOTICES.md`, `licenses/` (giấy phép từng thư viện). Không kèm mô hình. `-Tools` thêm `pdfread-translate.exe`, `pdfread-eval.exe`.
 

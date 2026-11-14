@@ -8,6 +8,10 @@
     glossaries), LICENSE, THIRD_PARTY_NOTICES.md, README.md and licenses/ (license text of
     every bundled third-party component).
 
+    GPU (M8): ggml-vulkan.dll ships in the main zip (needs only the GPU driver at run time).
+    ggml-cuda.dll and the NVIDIA runtime it imports (cudart, cuBLAS) are large, so they go to a
+    separate add-on zip ($name-cuda.zip) to extract into the same folder as HUSTpdf.exe.
+
 .EXAMPLE
     .\tools\package.ps1                 # package build\release (must be built)
     .\tools\package.ps1 -Build          # build + test release first
@@ -57,7 +61,8 @@ New-Item -ItemType Directory -Force (Join-Path $stage 'licenses') | Out-Null
 $exes = @('HUSTpdf.exe')
 if ($Tools) { $exes += @('pdfread-translate.exe', 'pdfread-eval.exe') }
 foreach ($e in $exes) { Copy-Item (Join-Path $bin $e) $stage }
-Get-ChildItem $bin -File -Filter '*.dll' | Where-Object { $_.Name -eq 'llama.dll' -or $_.Name -like 'ggml*.dll' } |
+Get-ChildItem $bin -File -Filter '*.dll' |
+    Where-Object { ($_.Name -eq 'llama.dll' -or $_.Name -like 'ggml*.dll') -and $_.Name -ne 'ggml-cuda.dll' } |
     ForEach-Object { Copy-Item $_.FullName $stage }
 
 # 2. Data (fonts, domains.json, glossaries) - from the source tree, not the build copy.
@@ -103,11 +108,64 @@ $($crtDir.Name) under the Microsoft Visual Studio redistributable license terms
 "@ | Out-File -Encoding utf8 (Join-Path $lic 'MSVC-runtime.txt')
 
 # 5. Zip.
+function New-Zip([string]$Folder, [string]$Zip) {
+    if (Test-Path $Zip) { Remove-Item -Force $Zip }
+    Compress-Archive -Path $Folder -DestinationPath $Zip -CompressionLevel Optimal
+    Write-Host ("Created {0} ({1:N1} MB)" -f $Zip, ((Get-Item $Zip).Length / 1MB))
+}
 $size = (Get-ChildItem $stage -Recurse -File | Measure-Object Length -Sum).Sum
 Write-Host ("Staged {0}: {1:N1} MB, runtime: {2}" -f $stage, ($size / 1MB), ($runtime -join ', '))
-if (-not $NoZip) {
-    $zip = Join-Path $out "$name.zip"
-    if (Test-Path $zip) { Remove-Item -Force $zip }
-    Compress-Archive -Path $stage -DestinationPath $zip -CompressionLevel Optimal
-    Write-Host ("Created {0} ({1:N1} MB)" -f $zip, ((Get-Item $zip).Length / 1MB))
+if (-not $NoZip) { New-Zip $stage (Join-Path $out "$name.zip") }
+
+# 6. CUDA add-on: ggml-cuda.dll + the NVIDIA runtime DLLs it imports. The folder has the same
+#    name as the main one, so extracting both zips into one place merges them.
+$cudaDll = Join-Path $bin 'ggml-cuda.dll'
+if (Test-Path $cudaDll) {
+    $cudaPath = $env:CUDA_PATH
+    if (-not $cudaPath) { $cudaPath = [Environment]::GetEnvironmentVariable('CUDA_PATH', 'Machine') }
+    if (-not $cudaPath) { throw 'ggml-cuda.dll was built but CUDA_PATH is not set (CUDA Toolkit missing?).' }
+    $addonRoot = Join-Path $out "$name-cuda"
+    $addon = Join-Path $addonRoot $name
+    if (Test-Path $addonRoot) { Remove-Item -Recurse -Force $addonRoot }
+    New-Item -ItemType Directory -Force (Join-Path $addon 'licenses') | Out-Null
+    Copy-Item $cudaDll $addon
+    # Follow imports transitively (cublas64 -> cublasLt64 ...), only DLLs that ship in the toolkit.
+    $cudaBins = @((Join-Path $cudaPath 'bin\x64'), (Join-Path $cudaPath 'bin')) | Where-Object { Test-Path $_ }
+    $queue = New-Object System.Collections.Queue
+    $queue.Enqueue($cudaDll)
+    $copied = @{}
+    while ($queue.Count -gt 0) {
+        $file = $queue.Dequeue()
+        (dumpbin /nologo /dependents $file) | ForEach-Object {
+            if ($_ -match '^\s+(\S+\.dll)\s*$') {
+                $dll = $Matches[1]
+                if ($copied.ContainsKey($dll.ToLower())) { return }
+                foreach ($dir in $cudaBins) {
+                    $src = Join-Path $dir $dll
+                    if (Test-Path $src) {
+                        Copy-Item $src $addon
+                        $copied[$dll.ToLower()] = $true
+                        $queue.Enqueue($src)
+                        break
+                    }
+                }
+            }
+        }
+    }
+    $eula = Get-ChildItem $cudaPath -File -Filter 'EULA*.txt' -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($eula) { Copy-Item $eula.FullName (Join-Path $addon 'licenses\NVIDIA-CUDA-EULA.txt') }
+    @"
+HUSTpdf - CUDA add-on (GPU NVIDIA)
+
+Extract this zip into the folder that contains HUSTpdf.exe (the folder names match, so the
+files land next to HUSTpdf.exe), then restart HUSTpdf and pick CUDA in Settings > Translation
+model > Device. Without this add-on, NVIDIA GPUs still work through the Vulkan backend.
+
+Contents: ggml-cuda.dll (llama.cpp, MIT) and NVIDIA CUDA runtime libraries
+($(@($copied.Keys) -join ', ')), redistributed under the NVIDIA CUDA Toolkit EULA
+(licenses\NVIDIA-CUDA-EULA.txt). Needs an NVIDIA driver recent enough for CUDA $((Split-Path $cudaPath -Leaf)).
+"@ | Out-File -Encoding utf8 (Join-Path $addon 'README-CUDA.txt')
+    $addonSize = (Get-ChildItem $addon -Recurse -File | Measure-Object Length -Sum).Sum
+    Write-Host ("Staged CUDA add-on {0}: {1:N1} MB ({2})" -f $addon, ($addonSize / 1MB), (@($copied.Keys) -join ', '))
+    if (-not $NoZip) { New-Zip $addon (Join-Path $out "$name-cuda.zip") }
 }

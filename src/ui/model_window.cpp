@@ -183,6 +183,74 @@ void ModelWindow::draw_download(const Info& info, float ui_scale, Action& action
     }
 }
 
+void ModelWindow::draw_device(const Info& info, float ui_scale, Action& action) {
+    using translate::Backend;
+    // Lần đầu tab hiện: dò GPU ở nền (nạp DLL Vulkan/CUDA, có thể đánh thức GPU rời) — chỉ khi
+    // người dùng mở phần cài đặt này, không dò lúc khởi động ở chế độ CPU.
+    if (!info.devices_probed && !info.probing && !probe_requested_once_ &&
+        (info.vulkan_installed || info.cuda_installed)) {
+        probe_request_ = true;
+        probe_requested_once_ = true;
+    }
+
+    std::string current;
+    switch (info.backend) {
+        case Backend::Auto: current = "Tự động (GPU rời nếu có, không thì CPU)"; break;
+        case Backend::Cpu: current = "CPU"; break;
+        case Backend::Vulkan:
+        case Backend::Cuda: {
+            current = std::format("{} · {}", translate::backend_label(info.backend),
+                                  info.device.empty() ? std::string("GPU tốt nhất") : info.device);
+            for (const translate::GpuDevice& d : info.devices) {
+                if (d.backend == info.backend && (info.device.empty() || d.description == info.device)) {
+                    current = translate::device_label(d);
+                    break;
+                }
+            }
+            break;
+        }
+    }
+
+    auto choose = [&](Backend b, std::string device) {
+        chosen_backend_ = b;
+        chosen_device_ = std::move(device);
+        action = Action::ApplyDevice;
+    };
+    ImGui::SetNextItemWidth(460 * ui_scale);
+    if (ImGui::BeginCombo("Thiết bị", current.c_str())) {
+        if (ImGui::Selectable("Tự động (GPU rời nếu có, không thì CPU)", info.backend == Backend::Auto)) {
+            choose(Backend::Auto, {});
+        }
+        if (ImGui::Selectable("CPU", info.backend == Backend::Cpu)) choose(Backend::Cpu, {});
+        for (std::size_t i = 0; i < info.devices.size(); ++i) {
+            const translate::GpuDevice& d = info.devices[i];
+            const bool selected = info.backend == d.backend && info.device == d.description;
+            ImGui::PushID(static_cast<int>(i));
+            if (ImGui::Selectable(translate::device_label(d).c_str(), selected)) choose(d.backend, d.description);
+            ImGui::PopID();
+        }
+        if (info.probing) ImGui::TextDisabled("Đang dò GPU…");
+        else if (info.devices_probed && info.devices.empty()) ImGui::TextDisabled("Không tìm thấy GPU dùng được");
+        ImGui::EndCombo();
+    }
+    ImGui::SetItemTooltip("Tự động: dùng GPU rời (CUDA nếu có gói CUDA, không thì Vulkan); máy chỉ có GPU tích hợp "
+                          "thì chạy CPU. GPU lỗi khi nạp mô hình thì tự chuyển về CPU.");
+    ImGui::SameLine();
+    ImGui::BeginDisabled(info.probing || !(info.vulkan_installed || info.cuda_installed));
+    if (ImGui::Button("Dò lại GPU")) probe_request_ = true;
+    ImGui::EndDisabled();
+
+    ImGui::PushTextWrapPos(0);
+    if (!info.device_in_use.empty()) ImGui::TextDisabled("Đang chạy trên: %s", info.device_in_use.c_str());
+    if (!info.vulkan_installed && !info.cuda_installed) {
+        ImGui::TextDisabled("Bản cài này chỉ có backend CPU.");
+    } else if (!info.cuda_installed) {
+        ImGui::TextDisabled("CUDA (GPU NVIDIA): chưa có gói bổ sung CUDA. Giải nén gói HUSTpdf-…-cuda vào thư mục chứa "
+                            "HUSTpdf.exe rồi mở lại app. Không có gói này, GPU NVIDIA vẫn chạy được qua Vulkan.");
+    }
+    ImGui::PopTextWrapPos();
+}
+
 ModelWindow::Action ModelWindow::draw(const Info& info, float ui_scale) {
     if (!open) return Action::None;
     ImGui::SetNextWindowSize(ImVec2(640 * ui_scale, 0), ImGuiCond_Appearing);
@@ -223,6 +291,7 @@ ModelWindow::Action ModelWindow::draw_contents(const Info& info, float ui_scale)
     draw_download(info, ui_scale, action);
 
     ImGui::SeparatorText("Suy luận");
+    draw_device(info, ui_scale, action);
     const int hw = std::max(1, static_cast<int>(std::thread::hardware_concurrency()));
     const std::string fmt = threads_ == 0 ? std::format("mặc định ({})", info.default_threads) : std::string("%d luồng");
     ImGui::SetNextItemWidth(260 * ui_scale);
@@ -231,7 +300,7 @@ ModelWindow::Action ModelWindow::draw_contents(const Info& info, float ui_scale)
     ImGui::BeginDisabled(threads_ == info.threads || info.model_path.empty());
     if (ImGui::Button("Áp dụng")) action = Action::ApplyThreads;
     ImGui::EndDisabled();
-    ImGui::SetItemTooltip("Nạp lại mô hình với số luồng mới");
+    ImGui::SetItemTooltip("Nạp lại mô hình với số luồng mới. Khi chạy GPU, số luồng CPU ít ảnh hưởng.");
 
     ImGui::SeparatorText("Cache bản dịch");
     if (info.cache) {

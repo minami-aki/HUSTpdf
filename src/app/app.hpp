@@ -61,12 +61,15 @@ struct AppOptions {
     std::vector<std::filesystem::path> model_search_dirs;
     std::filesystem::path model_download_dir;             // nơi lưu mô hình tải về (cửa sổ "Mô hình dịch")
     int threads = 0;                                      // luồng suy luận, 0 = mặc định
+    std::optional<translate::Backend> backend;            // --backend; không có: theo cài đặt
+    std::optional<std::string> device;                    // --device: GPU ưa dùng (description)
     bool add_generation_prompt = false;                   // xem translate::ModelConfig
     bool repack_weights = false;                          // xem translate::ModelConfig
     bool include_context = false;                         // thêm câu xung quanh vào prompt (thử nghiệm)
     bool open_glossary = false;                           // mở sẵn cửa sổ glossary
     bool open_model_window = false;                       // mở sẵn cửa sổ "Mô hình dịch"
     bool debug_frames = false;                            // chẩn đoán: ghi thống kê từng khung hình ra log
+    std::filesystem::path record_dir;                     // --record-frames: lưu cặp khung hình nghi nhấp nháy
     // Kiểm thử giao diện (--search, --reading-mode, --sidebar): tìm sẵn, chế độ đọc, tab thanh bên.
     std::string search;
     std::optional<ui::ReadingMode> reading_mode;
@@ -111,6 +114,7 @@ private:
     void open_dialog();
     void set_status(std::string text, bool is_error);
     void update_snapshot(int fb_width, int fb_height);
+    void debug_frame(int fb_width, int fb_height, bool presented);
 
     void update_translation();
     // force_model: bỏ qua trả lời bằng glossary; bypass_cache: không dùng bản dịch đã lưu.
@@ -249,6 +253,14 @@ private:
     bool last_presented_complete_ = false;
     double hold_since_ = 0;
     bool held_frame_ = false;
+    // --debug-frames / --record-frames: khung đã hiển thị gần nhất (RGB, từ dưới lên) và độ sáng theo ô lưới.
+    std::vector<unsigned char> rec_prev_;
+    std::vector<double> rec_prev_grid_;
+    int rec_prev_w_ = 0;
+    int rec_prev_h_ = 0;
+    std::uint64_t rec_prev_frame_ = 0;
+    int rec_saved_ = 0;
+    double rec_prev_time_ = 0;
     int click_step_ = 0;            // --click: 0 chờ, 1..3 đang bấm, 4 xong
     std::uint64_t click_frame_ = 0;
     float ui_scale_ = 1.0f;

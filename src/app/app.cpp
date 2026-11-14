@@ -73,7 +73,7 @@ App::App(GLFWwindow* window, const pdf::RootContext& root, AppOptions options)
       text_service_(root, [] { glfwPostEmptyEvent(); }),
       search_(root, [] { glfwPostEmptyEvent(); }),
       translation_([](const translate::ModelConfig& c) { return std::make_unique<translate::LlamaTranslator>(c); },
-                   [] { glfwPostEmptyEvent(); }),
+                   [] { glfwPostEmptyEvent(); }, [] { return translate::LlamaTranslator::probe_devices(); }),
       viewer_(render_, text_service_, textures_),
       model_window_([] { glfwPostEmptyEvent(); }) {
     glfwSetWindowUserPointer(window_, this);
@@ -242,25 +242,6 @@ bool App::render_frame() {
     glClear(GL_COLOR_BUFFER_BIT);
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     if (!options_.snapshot_path.empty()) update_snapshot(fb_w, fb_h);
-    if (options_.debug_frames) {
-        // Chẩn đoán nhấp nháy: thống kê nội dung khung hình vừa vẽ (độ sáng TB, tỉ lệ điểm tối).
-        std::vector<unsigned char> px(static_cast<std::size_t>(fb_w) * 3 * static_cast<std::size_t>(fb_h));
-        glPixelStorei(GL_PACK_ALIGNMENT, 1);
-        glReadBuffer(GL_BACK);
-        glReadPixels(0, 0, fb_w, fb_h, GL_RGB, GL_UNSIGNED_BYTE, px.data());
-        double sum = 0;
-        std::size_t dark = 0;
-        for (std::size_t i = 0; i < px.size(); i += 3) {
-            const int l = (px[i] + px[i + 1] + px[i + 2]) / 3;
-            sum += l;
-            dark += l < 100 ? 1 : 0;
-        }
-        const double n = static_cast<double>(px.size() / 3);
-        const ImDrawData* dd = ImGui::GetDrawData();
-        log::info("FRAME {} t={:.3f} lists={} vtx={} mean={:.1f} dark={:.4f} fb={}x{} blank={}", frame_, glfwGetTime(),
-                  dd->CmdListsCount, dd->TotalVtxCount, sum / n, static_cast<double>(dark) / n, fb_w, fb_h,
-                  viewer_.has_blank_tiles() ? 1 : 0);
-    }
     // Khung đang hiển thị đầy đủ mà khung mới còn lộ nền trắng: giữ khung cũ (không swap) cho tới
     // khi tile render xong hoặc quá kHoldBlankSeconds. Đang cuộn liên tục (khung trước cũng thiếu)
     // thì vẫn hiển thị để không khựng.
@@ -272,7 +253,7 @@ bool App::render_frame() {
         present = now - hold_since_ >= kHoldBlankSeconds;
     }
     held_frame_ = !present;
-    if (options_.debug_frames && !present) log::info("FRAME {} held (blank tiles)", frame_);
+    if (options_.debug_frames && fb_w > 0 && fb_h > 0) debug_frame(fb_w, fb_h, present);
     if (present) {
         glfwSwapBuffers(window_);
         last_presented_complete_ = !blank;
@@ -647,6 +628,18 @@ void App::draw_model_window() {
     info.download_dir = options_.model_download_dir;
     info.threads = options_.threads;
     info.default_threads = translate::LlamaTranslator::default_threads();
+    if (settings_window_.open) {
+        info.backend = options_.backend.value_or(translate::Backend::Auto);
+        info.device = options_.device.value_or(std::string());
+        info.device_in_use = translation_.device_name();
+        info.devices = translation_.devices();
+        info.devices_probed = translation_.devices_probed();
+        info.probing = translation_.probing_devices();
+        static const bool vulkan = translate::backend_installed(translate::Backend::Vulkan);
+        static const bool cuda = translate::backend_installed(translate::Backend::Cuda);
+        info.vulkan_installed = vulkan;
+        info.cuda_installed = cuda;
+    }
     if (store_ && settings_window_.open) {
         try {
             info.cache = store_->translation_stats();
@@ -655,6 +648,7 @@ void App::draw_model_window() {
     }
     ui::SettingsWindow::State state{reading_mode_, auto_translate_, whole_sentence_, options_.include_context};
     const ui::SettingsWindow::Result result = settings_window_.draw(state, model_window_, info, ui_scale_);
+    if (model_window_.take_probe_request()) translation_.probe_devices();
     if (result.reading_mode_changed) set_reading_mode(state.reading_mode, true);
     if (result.translation_changed) {
         auto_translate_ = state.auto_translate;
@@ -680,6 +674,15 @@ void App::draw_model_window() {
             if (store_) store_->set_int("model.threads", options_.threads);
             if (!model_path_.empty()) load_model(model_path_);
             break;
+        case Action::ApplyDevice:
+            options_.backend = model_window_.chosen_backend();
+            options_.device = model_window_.chosen_device();
+            if (store_) {
+                store_->set("model.backend", std::string(translate::backend_key(*options_.backend)));
+                store_->set("model.device", *options_.device);
+            }
+            if (!model_path_.empty()) load_model(model_path_);
+            break;
         case Action::ClearCache:
             if (store_) store_->clear_translations();
             log::info("Đã xóa cache bản dịch");
@@ -695,6 +698,10 @@ void App::load_settings() {
         whole_sentence_ = store_->get_bool("ui.whole_sentence").value_or(whole_sentence_);
         if (!options_.include_context) options_.include_context = store_->get_bool("ui.include_context").value_or(false);
         if (options_.threads == 0) options_.threads = std::max(0, store_->get_int("model.threads").value_or(0));
+        if (!options_.backend) {
+            if (const auto key = store_->get("model.backend")) options_.backend = translate::backend_from_key(*key);
+        }
+        if (!options_.device) options_.device = store_->get("model.device");
     } catch (const std::exception& e) {
         log::warn("Không đọc được cài đặt: {}", e.what());
     }
@@ -716,6 +723,8 @@ void App::load_model(const std::filesystem::path& path) {
     config.threads = options_.threads;
     config.add_generation_prompt = options_.add_generation_prompt;
     config.repack_weights = options_.repack_weights;
+    config.backend = options_.backend.value_or(translate::Backend::Auto);
+    config.device = options_.device.value_or(std::string());
     translation_.load_model(std::move(config));
 }
 
@@ -876,6 +885,12 @@ void App::draw_status_bar() {
     }
     {
         std::string right = std::format("Mô hình: {}", model_status_);
+        if (translation_.model_state() == translate::ModelState::Ready) {
+            // Chỉ tên backend ("CUDA", "Vulkan", "CPU"); tên GPU đầy đủ ở Cài đặt > Mô hình dịch.
+            std::string device = translation_.device_name();
+            if (const std::size_t cut = device.find_first_of(" ("); cut != std::string::npos) device.resize(cut);
+            if (!device.empty()) right += std::format(" · {}", device);
+        }
         if (viewer_.document()) {
             right = std::format("Trang {} / {}   ·   {:.0f}%   ·   {}", viewer_.current_page() + 1,
                                 viewer_.page_count(), viewer_.zoom() * 100.0, right);
@@ -1079,6 +1094,124 @@ void App::set_status(std::string text, bool is_error) {
     status_is_error_ = is_error;
 }
 
+namespace {
+
+// Lưu nội dung đọc từ OpenGL (RGB, hàng từ dưới lên) ra PNG.
+void save_gl_rows_png(const std::vector<unsigned char>& rows, int w, int h, const std::filesystem::path& path) {
+    auto pix = pdf::Pixmap::create_rgb(w, h);
+    const std::size_t row_bytes = static_cast<std::size_t>(w) * 3;
+    unsigned char* dst = pix->samples();
+    for (int y = 0; y < h; ++y) {
+        std::copy_n(rows.data() + static_cast<std::size_t>(h - 1 - y) * row_bytes, row_bytes,
+                    dst + static_cast<std::size_t>(y) * static_cast<std::size_t>(pix->stride()));
+    }
+    pdf::save_png(*pix, path);
+}
+
+// Thao tác của người dùng trong khung này: vị trí chuột, nút, lăn, phím vừa nhấn.
+std::string describe_input() {
+    const ImGuiIO& io = ImGui::GetIO();
+    std::string s = std::format("mouse={:.0f},{:.0f}", io.MousePos.x, io.MousePos.y);
+    if (io.MouseDown[0]) s += " L";
+    if (io.MouseDown[1]) s += " R";
+    if (io.MouseDown[2]) s += " M";
+    for (int b = 0; b < 3; ++b) {
+        if (io.MouseClicked[b]) s += std::format(" click{}x{}", b, io.MouseClickedCount[b]);
+    }
+    if (io.MouseWheel != 0 || io.MouseWheelH != 0) s += std::format(" wheel={:.2f},{:.2f}", io.MouseWheel, io.MouseWheelH);
+    std::string keys;
+    for (int k = ImGuiKey_NamedKey_BEGIN; k < ImGuiKey_NamedKey_END; ++k) {
+        const auto key = static_cast<ImGuiKey>(k);
+        if (key >= ImGuiKey_MouseLeft && key <= ImGuiKey_MouseWheelY) continue;
+        if (ImGui::IsKeyPressed(key, false)) {
+            if (!keys.empty()) keys += '+';
+            keys += ImGui::GetKeyName(key);
+        }
+    }
+    if (!keys.empty()) s += " keys=" + keys;
+    if (io.KeyCtrl) s += " ctrl";
+    if (io.KeyShift) s += " shift";
+    if (io.KeyAlt) s += " alt";
+    return s;
+}
+
+}  // namespace
+
+void App::debug_frame(int fb_w, int fb_h, bool presented) {
+    // Chẩn đoán nhấp nháy: thống kê khung hình vừa vẽ (độ sáng TB, tỉ lệ điểm tối, độ sáng theo
+    // lưới 16x16 ô) kèm thao tác của người dùng. Với --record-frames: khi một ô đổi độ sáng mạnh
+    // so với khung hiển thị trước, lưu cả hai khung ra PNG để xem tận mắt.
+    constexpr int kGrid = 16;
+    std::vector<unsigned char> px(static_cast<std::size_t>(fb_w) * 3 * static_cast<std::size_t>(fb_h));
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    glReadBuffer(GL_BACK);
+    glReadPixels(0, 0, fb_w, fb_h, GL_RGB, GL_UNSIGNED_BYTE, px.data());
+    std::vector<double> grid(kGrid * kGrid, 0.0);
+    std::vector<double> cnt(kGrid * kGrid, 0.0);
+    double sum = 0;
+    std::size_t dark = 0;
+    for (int y = 0; y < fb_h; ++y) {
+        const int gy = (fb_h - 1 - y) * kGrid / fb_h;  // ô tính từ trên xuống
+        const unsigned char* row = px.data() + static_cast<std::size_t>(y) * 3 * static_cast<std::size_t>(fb_w);
+        for (int x = 0; x < fb_w; ++x) {
+            const int l = (row[3 * x] + row[3 * x + 1] + row[3 * x + 2]) / 3;
+            sum += l;
+            dark += l < 100 ? 1 : 0;
+            const int cell = gy * kGrid + x * kGrid / fb_w;
+            grid[static_cast<std::size_t>(cell)] += l;
+            cnt[static_cast<std::size_t>(cell)] += 1;
+        }
+    }
+    for (std::size_t i = 0; i < grid.size(); ++i) grid[i] /= std::max(1.0, cnt[i]);
+
+    double max_diff = 0;
+    int max_cell = -1;
+    int changed_cells = 0;
+    const bool comparable = !rec_prev_grid_.empty() && rec_prev_w_ == fb_w && rec_prev_h_ == fb_h;
+    if (comparable) {
+        for (std::size_t i = 0; i < grid.size(); ++i) {
+            const double d = std::abs(grid[i] - rec_prev_grid_[i]);
+            changed_cells += d > 40 ? 1 : 0;
+            if (d > max_diff) {
+                max_diff = d;
+                max_cell = static_cast<int>(i);
+            }
+        }
+    }
+    const double now = glfwGetTime();
+    const double n = static_cast<double>(fb_w) * fb_h;
+    const ImDrawData* dd = ImGui::GetDrawData();
+    log::info("FRAME {} t={:.3f} dt={:.0f}ms {} vtx={} mean={:.1f} dark={:.4f} fb={}x{} blank={} diff={:.0f}@{},{} "
+              "cells={} | {}",
+              frame_, now, rec_prev_time_ > 0 ? (now - rec_prev_time_) * 1000 : 0.0, presented ? "shown" : "HELD",
+              dd->TotalVtxCount, sum / n, static_cast<double>(dark) / n, fb_w, fb_h, viewer_.has_blank_tiles() ? 1 : 0,
+              max_diff, max_cell < 0 ? -1 : max_cell % kGrid, max_cell < 0 ? -1 : max_cell / kGrid, changed_cells,
+              describe_input());
+    rec_prev_time_ = now;
+    if (!presented) return;
+
+    // Ô đổi sáng > 90/255 so với khung trước: nghi nhấp nháy (cuộn văn bản thường chỉ đổi vài chục).
+    if (!options_.record_dir.empty() && comparable && max_diff > 90 && rec_saved_ < 60) {
+        try {
+            std::filesystem::create_directories(options_.record_dir);
+            const std::string base = std::format("flicker_{:03}", rec_saved_);
+            save_gl_rows_png(rec_prev_, fb_w, fb_h,
+                             options_.record_dir / std::format("{}_a_frame{}.png", base, rec_prev_frame_));
+            save_gl_rows_png(px, fb_w, fb_h, options_.record_dir / std::format("{}_b_frame{}.png", base, frame_));
+            log::info("FLICKER? {} khung {} -> {}: ô ({},{}) đổi {:.0f}, {} ô đổi > 40", base, rec_prev_frame_, frame_,
+                      max_cell % kGrid, max_cell / kGrid, max_diff, changed_cells);
+            ++rec_saved_;
+        } catch (const std::exception& e) {
+            log::warn("Không lưu được khung hình: {}", e.what());
+        }
+    }
+    rec_prev_grid_ = std::move(grid);
+    if (!options_.record_dir.empty()) rec_prev_ = std::move(px);
+    rec_prev_w_ = fb_w;
+    rec_prev_h_ = fb_h;
+    rec_prev_frame_ = frame_;
+}
+
 void App::update_snapshot(int fb_width, int fb_height) {
     // Chụp khi tài liệu đã mở và mọi tile nhìn thấy đã render xong, ổn định vài frame.
     // Có vùng chọn đặt sẵn và có mô hình: chờ dịch xong.
@@ -1087,7 +1220,9 @@ void App::update_snapshot(int fb_width, int fb_height) {
         (translate_at_ > 0 || popup_.busy() || (auto_translate_ && viewer_.has_selection() && !popup_.visible()));
     const bool ready = viewer_.document() && viewer_.fully_rendered() && !render_.busy() &&
                        (!options_.select || viewer_.selection_complete()) && !waiting_translation &&
-                       !search_running_ && (!options_.click || (click_step_ >= 4 && frame_ > click_frame_ + 10));
+                       !search_running_ && (!options_.click || (click_step_ >= 4 && frame_ > click_frame_ + 10)) &&
+                       (!settings_window_.open || (translation_.model_state() != translate::ModelState::Loading &&
+                                                   !translation_.probing_devices()));
     snapshot_stable_frames_ = ready ? snapshot_stable_frames_ + 1 : 0;
     const bool timed_out = glfwGetTime() - start_time_ > kSnapshotTimeoutSeconds;
     const bool failed_open = !loading_ && !viewer_.document() && frame_ > 2;
