@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <functional>
 #include <unordered_map>
+#include <vector>
 
 #include "pdf/render_service.hpp"
 
@@ -43,6 +44,12 @@ public:
     void evict(std::uint64_t frame);
     void clear();
 
+    // Xóa thật các texture đã bỏ. Texture bị bỏ giữa frame (vd. đổi chế độ màu từ cửa sổ Cài đặt,
+    // vẽ SAU trang) có thể vẫn nằm trong draw list của frame đó: glDeleteTextures ngay thì lúc
+    // render tên texture không còn hợp lệ, GL vẽ bằng texture đang bind (atlas chữ) -> trang
+    // chớp thành rác. App gọi hàm này sau khi đã render draw list.
+    void flush_deleted();
+
     [[nodiscard]] std::size_t bytes() const noexcept { return bytes_; }
     [[nodiscard]] std::size_t size() const noexcept { return entries_.size(); }
 
@@ -52,6 +59,7 @@ private:
     std::size_t budget_;
     std::size_t bytes_ = 0;
     std::unordered_map<pdf::TileKey, TileTexture, pdf::TileKeyHash> entries_;
+    std::vector<unsigned int> deleted_;  // chờ flush_deleted()
 };
 
 }  // namespace pdfread::ui

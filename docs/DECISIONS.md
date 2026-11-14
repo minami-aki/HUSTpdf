@@ -203,6 +203,14 @@ Tập `tools/eval/nuclear.csv` (40 câu hạt nhân – nguyên tử, có ngữ 
 - Đóng gói: gói chính 17 → 29 MB (thêm `ggml-vulkan.dll` 40 MB). Gói bổ sung CUDA 427 MB zip (562 MB giải nén): `ggml-cuda.dll` + `cublas64_13.dll` + `cublasLt64_13.dll` (cudart liên kết tĩnh), kèm NVIDIA EULA và README; thư mục trùng tên gói chính để giải nén chồng lên. Bản hiện tại build CUDA cho kiến trúc của máy build (sm_86, RTX 30xx) — xem câu hỏi còn mở bên dưới.
 - Còn mở: (1) danh sách kiến trúc CUDA cho bản phát hành (thêm sm_75/89/120 làm DLL lớn hơn và build lâu hơn nhiều); (2) giấy phép: phân phối cuBLAS (độc quyền, EULA NVIDIA) cùng app AGPL-3.0 có dùng MuPDF — cần người dùng xem xét trước khi đăng gói CUDA công khai.
 
+## 2026-11-14 — bộ cài đặt một file (người dùng chốt: Inno Setup, cho người dùng chọn cài cho mình/mọi người, CUDA chỉ sm_86)
+
+- Inno Setup 6.7.3 (winget). `tools/make_installer.ps1` dàn file bằng `package.ps1` vào `build/installer-stage` (không đụng `dist/`, có thể đang được app mở) rồi gọi ISCC với `tools/installer/hustpdf.iss` (UTF-8 có BOM vì có chuỗi tiếng Việt).
+- Một file `dist/HUSTpdf-0.1.0-win64-setup.exe` 421 MB (LZMA2 ultra, solid): app + CPU + Vulkan (thành phần cố định) và CUDA + cuBLAS (thành phần tùy chọn, mặc định chọn). Không kèm mô hình.
+- `PrivilegesRequired=lowest` + `PrivilegesRequiredOverridesAllowed=dialog`: hỏi cài cho riêng mình (không admin) hay mọi người dùng. AppId cố định để bản sau cài đè. Cài lại không có CUDA thì `[InstallDelete]` xóa DLL CUDA cũ. "Open with" đăng ký ProgID `HUSTpdf.pdf` + `OpenWithProgids`, không chiếm chương trình mặc định.
+- Kiểm tra (cài im lặng vào thư mục tạm): 91 file, 643 MB; Tự động -> CUDA 103 token/s, Vulkan 102 token/s, CPU 10 token/s; cài lại kiểu "Gọn" -> hết file CUDA, chọn CUDA thì chạy Vulkan; gỡ cài đặt xóa sạch thư mục, giữ mô hình trong `%LOCALAPPDATA%\HUSTpdf`.
+- CUDA vẫn chỉ biên dịch cho sm_86 (RTX 30): GPU NVIDIA khác dùng Vulkan. Câu hỏi giấy phép cuBLAS + AGPL (mục M8) vẫn còn mở — bộ cài này nên dùng nội bộ cho tới khi xem xét xong.
+
 ## Thông tin tham chiếu
 
 - vcpkg baseline: `177e8175121536d414f405ed8b3099b325a42638` (2026-11-11).

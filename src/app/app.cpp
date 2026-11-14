@@ -241,6 +241,7 @@ bool App::render_frame() {
     glClearColor(0.96f, 0.96f, 0.97f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    textures_.flush_deleted();  // sau khi draw list của frame này đã render (xem TextureCache)
     if (!options_.snapshot_path.empty()) update_snapshot(fb_w, fb_h);
     // Khung đang hiển thị đầy đủ mà khung mới còn lộ nền trắng: giữ khung cũ (không swap) cho tới
     // khi tile render xong hoặc quá kHoldBlankSeconds. Đang cuộn liên tục (khung trước cũng thiếu)
@@ -255,6 +256,11 @@ bool App::render_frame() {
     held_frame_ = !present;
     if (options_.debug_frames && fb_w > 0 && fb_h > 0) debug_frame(fb_w, fb_h, present);
     if (present) {
+        // Chờ GPU vẽ xong rồi mới đưa khung hình ra. Driver OpenGL của GPU tích hợp AMD (máy thử
+        // nghiệm) đôi khi trình chiếu khung chỉ mới có màu nền (glClear) khi di chuột -> cả cửa
+        // sổ chớp. Khi --debug-frames đọc ngược khung hình (cũng là đồng bộ GPU) thì không còn
+        // chớp. Chỉ vẽ khi có sự kiện nên chi phí nhỏ.
+        glFinish();
         glfwSwapBuffers(window_);
         last_presented_complete_ = !blank;
         hold_since_ = 0;

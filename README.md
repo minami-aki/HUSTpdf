@@ -169,6 +169,14 @@ CSV vào (UTF-8, có tiêu đề): `en, domain, context, reference` (domain = id
 .\tools\package.ps1 [-Build] [-Tools]     # -> dist\HUSTpdf-<phiên bản>-win64\ và .zip (+ -cuda.zip nếu build có CUDA)
 ```
 
+### Bộ cài đặt (một file .exe)
+
+```powershell
+.\tools\make_installer.ps1 [-Build]      # -> dist\HUSTpdf-<phiên bản>-win64-setup.exe (~420 MB)
+```
+
+Cần [Inno Setup 6](https://jrsoftware.org/isinfo.php) (`winget install JRSoftware.InnoSetup`) và bản Release có Vulkan + CUDA. Bộ cài chứa mọi thứ trừ mô hình dịch (app tự hỏi tải ở lần chạy đầu): CPU (mọi biến thể), Vulkan, CUDA + cuBLAS (thành phần tùy chọn, chọn sẵn; kiểu cài "Gọn" bỏ CUDA, tiết kiệm ~560 MB). Khi cài, chọn **chỉ cho tôi** (không cần quyền admin, `%LOCALAPPDATA%\Programs\HUSTpdf`) hoặc **mọi người dùng** (Program Files). Tùy chọn: biểu tượng màn hình nền, thêm HUSTpdf vào "Open with" cho file PDF (không đổi chương trình mặc định). Gỡ cài đặt xóa thư mục chương trình, giữ dữ liệu người dùng (`%LOCALAPPDATA%\HUSTpdf`: mô hình, cache, cài đặt). Cài im lặng: `HUSTpdf-…-setup.exe /VERYSILENT /CURRENTUSER [/TYPE=compact]`. Giao diện trình cài là tiếng Anh (Inno Setup chưa có bản tiếng Việt chính thức); các lựa chọn riêng của HUSTpdf ghi tiếng Việt.
+
 Build GPU: bản Release tự bật backend Vulkan khi có [Vulkan SDK](https://vulkan.lunarg.com/) (`VULKAN_SDK`) và CUDA khi có CUDA Toolkit (`CUDA_PATH`); tắt bằng `-DPDFREAD_VULKAN=OFF` / `-DPDFREAD_CUDA=OFF`. Bản Debug không build GPU. `PDFREAD_CUDA_ARCHS` (mặc định `native` = GPU của máy build) chọn kiến trúc NVIDIA được biên dịch sẵn. CI không có hai bộ công cụ này nên chỉ build CPU.
 
 Gói chạy không cần cài đặt: `HUSTpdf.exe`, DLL llama.cpp/ggml, Visual C++ runtime (`vcruntime140*.dll`, `msvcp140.dll`, chép app-local nên không cần cài VC Redist), `data/`, `LICENSE.txt`, `THIRD_PARTY_NOTICES.md`, `licenses/` (giấy phép từng thư viện). Không kèm mô hình. `-Tools` thêm `pdfread-translate.exe`, `pdfread-eval.exe`.

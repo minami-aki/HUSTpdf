@@ -20,7 +20,10 @@ std::size_t texture_bytes(int w, int h) {
 
 TextureCache::TextureCache(std::size_t budget_bytes) : budget_(budget_bytes) {}
 
-TextureCache::~TextureCache() { clear(); }
+TextureCache::~TextureCache() {
+    clear();
+    flush_deleted();
+}
 
 const TileTexture* TextureCache::use(const pdf::TileKey& key, std::uint64_t frame) {
     auto it = entries_.find(key);
@@ -90,11 +93,17 @@ void TextureCache::clear() {
 
 void TextureCache::destroy(TileTexture& t) {
     if (t.texture != 0) {
-        GLuint tex = t.texture;
-        glDeleteTextures(1, &tex);
+        deleted_.push_back(t.texture);
         bytes_ -= texture_bytes(t.width, t.height);
         t.texture = 0;
     }
+}
+
+void TextureCache::flush_deleted() {
+    if (deleted_.empty()) return;
+    std::vector<GLuint> names(deleted_.begin(), deleted_.end());
+    glDeleteTextures(static_cast<GLsizei>(names.size()), names.data());
+    deleted_.clear();
 }
 
 }  // namespace pdfread::ui
