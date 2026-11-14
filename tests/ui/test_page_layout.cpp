@@ -94,6 +94,16 @@ TEST_CASE("PageLayout typical_page picks the most common page size", "[ui][layou
     CHECK(l.typical_page().w == Approx(100));
 }
 
+TEST_CASE("PageLayout typical_page uses the median for scanned books with varying sizes", "[ui][layout]") {
+    PageLayout l;
+    // 3 trang đầu cùng khổ nhỏ, 10 trang scan mỗi trang một khổ ~700 pt.
+    std::vector<pdfread::ui::PageSize> pages{{466, 682}, {466, 682}, {466, 682}};
+    for (int i = 0; i < 10; ++i) pages.push_back({695.0 + i, 840.0 + i});
+    l.set_pages(pages);
+    CHECK(l.typical_page().w > 690);
+    CHECK(l.typical_page().h > 835);
+}
+
 TEST_CASE("PageLayout handles an empty document", "[ui][layout]") {
     PageLayout l;
     l.set_pages({});

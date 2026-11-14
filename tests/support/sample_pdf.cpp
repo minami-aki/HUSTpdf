@@ -71,7 +71,7 @@ std::string pdf_stroke_rect(double x, double y, double w, double h, double line_
     return std::format("q {:.2f} w {:.2f} {:.2f} {:.2f} {:.2f} re S Q\n", line_width, x, y, w, h);
 }
 
-std::string build_pdf(const std::vector<SamplePage>& pages) {
+std::string build_pdf(const std::vector<SamplePage>& pages, const std::vector<SampleOutline>& outline) {
     std::string out = "%PDF-1.7\n%\xE2\xE3\xCF\xD3\n";
     std::vector<std::size_t> offsets;
     auto add_object = [&](const std::string& body) {
@@ -83,19 +83,90 @@ std::string build_pdf(const std::vector<SamplePage>& pages) {
     const int first_page_obj = 7;  // 1 catalog, 2 pages, 3-6 font
     std::string kids;
     for (int i = 0; i < n; ++i) kids += std::format("{} 0 R ", first_page_obj + 2 * i);
+    auto page_ref = [&](int i) { return first_page_obj + 2 * i; };
 
-    add_object("<< /Type /Catalog /Pages 2 0 R >>");
+    // Số hiệu đối tượng: liên kết sau các trang, mục lục sau liên kết.
+    int next_obj = first_page_obj + 2 * n;
+    std::vector<std::vector<int>> link_objs(static_cast<std::size_t>(n));
+    for (int i = 0; i < n; ++i) {
+        for (std::size_t k = 0; k < pages[static_cast<std::size_t>(i)].links.size(); ++k) {
+            link_objs[static_cast<std::size_t>(i)].push_back(next_obj++);
+        }
+    }
+    const int outline_root = outline.empty() ? 0 : next_obj++;
+    std::vector<int> item_obj;
+    for (std::size_t k = 0; k < outline.size(); ++k) item_obj.push_back(next_obj++);
+
+    add_object(outline_root != 0 ? std::format("<< /Type /Catalog /Pages 2 0 R /Outlines {} 0 R >>", outline_root)
+                                 : std::string("<< /Type /Catalog /Pages 2 0 R >>"));
     add_object(std::format("<< /Type /Pages /Kids [{}] /Count {} >>", kids, n));
     for (const char* base : {"Helvetica", "Times-Roman", "Helvetica-Bold", "Courier"}) {
         add_object(std::format("<< /Type /Font /Subtype /Type1 /BaseFont /{} /Encoding /WinAnsiEncoding >>", base));
     }
     for (int i = 0; i < n; ++i) {
         const SamplePage& p = pages[static_cast<std::size_t>(i)];
+        std::string annots;
+        for (int obj : link_objs[static_cast<std::size_t>(i)]) annots += std::format("{} 0 R ", obj);
         add_object(std::format(
             "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {:.2f} {:.2f}] /Rotate {} "
-            "/Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R /F4 6 0 R >> >> /Contents {} 0 R >>",
-            p.width, p.height, p.rotate, first_page_obj + 2 * i + 1));
+            "/Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R /F4 6 0 R >> >> /Contents {} 0 R{} >>",
+            p.width, p.height, p.rotate, first_page_obj + 2 * i + 1,
+            annots.empty() ? std::string() : std::format(" /Annots [{}]", annots)));
         add_object(std::format("<< /Length {} >>\nstream\n{}\nendstream", p.content.size(), p.content));
+    }
+    for (int i = 0; i < n; ++i) {
+        for (const SampleLink& l : pages[static_cast<std::size_t>(i)].links) {
+            const std::string action =
+                l.dest_page >= 0 ? std::format("/Dest [{} 0 R /XYZ 0 {:.2f} 0]", page_ref(l.dest_page), l.dest_y)
+                                 : std::format("/A << /S /URI /URI ({}) >>", l.uri);
+            add_object(std::format("<< /Type /Annot /Subtype /Link /Rect [{:.2f} {:.2f} {:.2f} {:.2f}] /Border [0 0 0] {} >>",
+                                   l.x0, l.y0, l.x1, l.y1, action));
+        }
+    }
+    if (outline_root != 0) {
+        // Cha của từng mục; anh em kề trước/sau; con đầu/cuối.
+        const std::size_t m = outline.size();
+        std::vector<int> parent(m, -1);
+        std::vector<int> prev(m, -1);
+        std::vector<int> next(m, -1);
+        std::vector<int> first(m, -1);
+        std::vector<int> last(m, -1);
+        std::vector<int> stack;  // chỉ số mục theo level
+        std::vector<int> last_at_level(m + 1, -1);
+        int root_first = -1;
+        int root_last = -1;
+        for (std::size_t k = 0; k < m; ++k) {
+            const int lv = outline[k].level;
+            const int par = lv == 0 ? -1 : last_at_level[static_cast<std::size_t>(lv - 1)];
+            parent[k] = par;
+            const int sib = last_at_level[static_cast<std::size_t>(lv)];
+            const bool same_parent = sib >= 0 && parent[static_cast<std::size_t>(sib)] == par;
+            if (same_parent) {
+                prev[k] = sib;
+                next[static_cast<std::size_t>(sib)] = static_cast<int>(k);
+            }
+            if (par >= 0) {
+                if (first[static_cast<std::size_t>(par)] < 0) first[static_cast<std::size_t>(par)] = static_cast<int>(k);
+                last[static_cast<std::size_t>(par)] = static_cast<int>(k);
+            } else {
+                if (root_first < 0) root_first = static_cast<int>(k);
+                root_last = static_cast<int>(k);
+            }
+            last_at_level[static_cast<std::size_t>(lv)] = static_cast<int>(k);
+            for (std::size_t d = static_cast<std::size_t>(lv) + 1; d < last_at_level.size(); ++d) last_at_level[d] = -1;
+        }
+        auto ref = [&](int k) { return item_obj[static_cast<std::size_t>(k)]; };
+        add_object(std::format("<< /Type /Outlines /First {} 0 R /Last {} 0 R /Count {} >>", ref(root_first),
+                               ref(root_last), m));
+        for (std::size_t k = 0; k < m; ++k) {
+            const SampleOutline& o = outline[k];
+            std::string body = std::format("<< /Title ({}) /Parent {} 0 R /Dest [{} 0 R /XYZ 0 {:.2f} 0]", o.title,
+                                           parent[k] >= 0 ? ref(parent[k]) : outline_root, page_ref(o.page), o.y);
+            if (prev[k] >= 0) body += std::format(" /Prev {} 0 R", ref(prev[k]));
+            if (next[k] >= 0) body += std::format(" /Next {} 0 R", ref(next[k]));
+            if (first[k] >= 0) body += std::format(" /First {} 0 R /Last {} 0 R /Count 1", ref(first[k]), ref(last[k]));
+            add_object(body + " >>");
+        }
     }
 
     const std::size_t xref = out.size();
@@ -105,10 +176,11 @@ std::string build_pdf(const std::vector<SamplePage>& pages) {
     return out;
 }
 
-void write_pdf(const std::filesystem::path& path, const std::vector<SamplePage>& pages) {
+void write_pdf(const std::filesystem::path& path, const std::vector<SamplePage>& pages,
+               const std::vector<SampleOutline>& outline) {
     std::ofstream f(path, std::ios::binary);
     if (!f) throw std::runtime_error("cannot write " + path.string());
-    const std::string data = build_pdf(pages);
+    const std::string data = build_pdf(pages, outline);
     f.write(data.data(), static_cast<std::streamsize>(data.size()));
 }
 

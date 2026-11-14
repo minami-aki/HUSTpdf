@@ -15,6 +15,7 @@
 
 #include "pdf/document.hpp"
 #include "pdf/render_service.hpp"
+#include "pdf/search_service.hpp"
 #include "pdf/text_service.hpp"
 #include "storage/store.hpp"
 #include "terminology/glossary_store.hpp"
@@ -23,6 +24,8 @@
 #include "translate/translation_service.hpp"
 #include "ui/glossary_window.hpp"
 #include "ui/model_window.hpp"
+#include "ui/settings_window.hpp"
+#include "ui/theme.hpp"
 #include "ui/texture_cache.hpp"
 #include "ui/translation_popup.hpp"
 #include "ui/viewer.hpp"
@@ -64,6 +67,11 @@ struct AppOptions {
     bool open_glossary = false;                           // mở sẵn cửa sổ glossary
     bool open_model_window = false;                       // mở sẵn cửa sổ "Mô hình dịch"
     bool debug_frames = false;                            // chẩn đoán: ghi thống kê từng khung hình ra log
+    // Kiểm thử giao diện (--search, --reading-mode, --sidebar): tìm sẵn, chế độ đọc, tab thanh bên.
+    std::string search;
+    std::optional<ui::ReadingMode> reading_mode;
+    std::string sidebar;  // "outline" | "bookmarks" | "search"
+    std::optional<std::pair<float, float>> click;  // --click x,y: bấm chuột trái (tọa độ cửa sổ) khi trang đã hiện
     bool use_cache = true;                                // cache bản dịch trong SQLite
     std::filesystem::path database_path;                  // rỗng: local_data_dir()/pdfread.db
 };
@@ -91,6 +99,7 @@ private:
         std::string fingerprint;      // dấu vân tay file (rỗng nếu không có cơ sở dữ liệu)
         std::string domain_override;  // lĩnh vực người dùng đã chọn cho tài liệu này
         int last_page = 0;            // trang đang đọc lần trước
+        std::vector<pdf::OutlineItem> outline;
     };
 
     bool render_frame();
@@ -112,6 +121,28 @@ private:
     void load_settings();
     void save_reading_position();
     void draw_model_window();
+
+    // --- đọc sách (app_reader.cpp): thanh bên, điều hướng, tìm kiếm, dấu trang, chế độ đọc ---
+    enum class SidebarTab { Outline = 0, Bookmarks = 1, Search = 2 };
+    void draw_sidebar();
+    void draw_outline_tab();
+    void draw_bookmarks_tab();
+    void draw_search_tab();
+    void open_sidebar(SidebarTab tab);
+    void navigate_to(ui::Location dest);  // ghi lịch sử rồi chuyển tới
+    void go_back();
+    void go_forward();
+    void follow_link(const pdf::Link& link);
+    void start_search();
+    void poll_search();
+    void select_search_hit(int index, bool record_history);
+    void update_search_highlights();
+    void add_bookmark();
+    void reload_bookmarks();
+    void set_reading_mode(ui::ReadingMode mode, bool save);
+    [[nodiscard]] int current_outline_item() const;
+    [[nodiscard]] std::string section_title(int page) const;
+    void handle_reader_shortcuts();
     void start_term_extraction(const std::shared_ptr<pdf::Document>& doc, std::uint64_t ticket);
     void apply_domains();
     [[nodiscard]] std::vector<translate::DomainScore> effective_domains() const;
@@ -175,12 +206,35 @@ private:
     ThreadPool loader_;  // mở tài liệu, phân loại lĩnh vực, trích thuật ngữ ở nền (1 luồng)
     pdf::RenderService render_;
     pdf::TextService text_service_;
+    pdf::SearchService search_;
     translate::TranslationService translation_;
     ui::TextureCache textures_;
     ui::Viewer viewer_;
     ui::TranslationPopup popup_;
     ui::GlossaryWindow glossary_window_;
     ui::ModelWindow model_window_;
+    ui::SettingsWindow settings_window_;
+
+    // Đọc sách
+    ui::ReadingMode reading_mode_ = ui::ReadingMode::Normal;
+    std::vector<pdf::OutlineItem> outline_;
+    std::vector<storage::Bookmark> bookmarks_;
+    std::vector<ui::Location> back_;
+    std::vector<ui::Location> forward_;
+    bool sidebar_open_ = false;
+    std::optional<SidebarTab> sidebar_select_;
+    // Tìm kiếm
+    std::string search_query_;
+    std::string searched_query_;              // câu đã tìm (Enter lần nữa = kết quả tiếp)
+    std::vector<std::string> search_terms_;   // thuật ngữ tiếng Anh khi tìm bằng tiếng Việt
+    std::uint64_t search_ticket_ = 0;
+    std::vector<pdf::SearchHit> search_hits_;
+    int search_current_ = -1;
+    int search_start_page_ = 0;
+    bool search_running_ = false;
+    int search_pages_done_ = 0;
+    int search_pages_total_ = 0;
+    bool focus_search_ = false;
 
     bool auto_translate_ = true;
     bool whole_sentence_ = true;  // bôi đen nửa câu -> dịch cả câu (đổi được trong popup)
@@ -195,6 +249,8 @@ private:
     bool last_presented_complete_ = false;
     double hold_since_ = 0;
     bool held_frame_ = false;
+    int click_step_ = 0;            // --click: 0 chờ, 1..3 đang bấm, 4 xong
+    std::uint64_t click_frame_ = 0;
     float ui_scale_ = 1.0f;
     std::optional<float> pending_scale_;
     bool in_frame_ = false;

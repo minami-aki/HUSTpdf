@@ -145,6 +145,21 @@ int run(const std::vector<std::string>& args) {
             options.repack_weights = true;
         } else if (a == "--glossary") {
             options.open_glossary = true;
+        } else if (a == "--search") {
+            options.search = next();
+        } else if (a == "--reading-mode") {
+            const std::string& mode = next();
+            options.reading_mode = ui::reading_mode_from_key(mode);
+            if (!options.reading_mode) log::warn("--reading-mode không hợp lệ: {} (normal|sepia|dark|warm)", mode);
+        } else if (a == "--click") {
+            const std::string& v = next();
+            const std::size_t comma = v.find(',');
+            if (comma != std::string::npos) {
+                options.click = std::make_pair(static_cast<float>(std::atof(v.substr(0, comma).c_str())),
+                                               static_cast<float>(std::atof(v.substr(comma + 1).c_str())));
+            }
+        } else if (a == "--sidebar") {
+            options.sidebar = next();
         } else if (a == "--debug-frames") {
             options.debug_frames = true;
         } else if (a == "--model-window") {

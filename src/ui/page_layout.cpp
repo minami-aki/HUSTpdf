@@ -29,6 +29,19 @@ void PageLayout::set_pages(std::vector<PageSize> pages) {
             typical_ = pages_[info.second];
         }
     }
+    // Sách scan: mỗi trang một khổ hơi khác nhau, khổ "nhiều nhất" có thể chỉ là một nhóm nhỏ
+    // (vd. vài trang đầu) -> dùng trung vị chiều rộng / chiều cao để đại diện cho đa số trang.
+    if (!pages_.empty() && static_cast<double>(best) < 0.3 * static_cast<double>(pages_.size())) {
+        std::vector<double> ws;
+        std::vector<double> hs;
+        for (const PageSize& p : pages_) {
+            ws.push_back(p.w);
+            hs.push_back(p.h);
+        }
+        std::nth_element(ws.begin(), ws.begin() + static_cast<std::ptrdiff_t>(ws.size() / 2), ws.end());
+        std::nth_element(hs.begin(), hs.begin() + static_cast<std::ptrdiff_t>(hs.size() / 2), hs.end());
+        typical_ = {ws[ws.size() / 2], hs[hs.size() / 2]};
+    }
     rebuild();
 }
 

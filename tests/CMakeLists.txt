@@ -23,6 +23,8 @@ add_executable(pdfread_tests
     translate/test_translation_service.cpp
     text/test_sentence_splitter.cpp
     text/test_page_text.cpp
+    text/test_search.cpp
+    pdf/test_navigation.cpp
     context/test_translation_plan.cpp
     text/test_protect.cpp
     terminology/test_glossary.cpp

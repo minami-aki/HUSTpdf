@@ -38,6 +38,28 @@ struct IRect {
     [[nodiscard]] int height() const noexcept { return y1 - y0; }
 };
 
+// Một mục mục lục (outline), danh sách phẳng theo thứ tự duyệt trước; con có level lớn hơn
+// cha 1 và nằm ngay sau cha.
+struct OutlineItem {
+    std::string title;
+    int level = 0;
+    int page = -1;     // -1: không trỏ tới trang nào trong tài liệu
+    float y = -1;      // point từ mép trên trang (giống tọa độ text); < 0: đầu trang
+    std::string uri;   // liên kết ngoài (http…), nếu có
+};
+
+// Liên kết trên trang. Khung theo point, gốc góc trên-trái trang (cùng hệ với text/vùng chọn).
+struct Link {
+    float x0 = 0;
+    float y0 = 0;
+    float x1 = 0;
+    float y1 = 0;
+    int page = -1;     // đích trong tài liệu (-1 nếu là liên kết ngoài / không xác định)
+    float y = -1;      // vị trí đích trên trang (point từ mép trên); < 0: đầu trang
+    std::string uri;   // liên kết ngoài (http, https, mailto…)
+    [[nodiscard]] bool contains(float px, float py) const noexcept { return px >= x0 && px <= x1 && py >= y0 && py <= y1; }
+};
+
 class DisplayList {
 public:
     explicit DisplayList(fz_display_list* list) noexcept : list_(list) {}
@@ -100,6 +122,10 @@ public:
     // Tiêu đề các mục trong mục lục (outline) theo thứ tự, tối đa `max_items`. Rỗng nếu
     // tài liệu không có mục lục. Thread-safe.
     [[nodiscard]] std::vector<std::string> outline_titles(std::size_t max_items = 300);
+    // Mục lục đầy đủ (tối đa `max_items` mục). Thread-safe.
+    [[nodiscard]] std::vector<OutlineItem> outline(std::size_t max_items = 20000);
+    // Liên kết của trang (có cache). Thread-safe. Lỗi -> danh sách rỗng.
+    [[nodiscard]] std::vector<Link> links(int index);
     void set_display_list_capacity(std::size_t capacity);
 
 private:
@@ -112,6 +138,7 @@ private:
     std::uint64_t id_;
 
     std::mutex doc_mutex_;  // mọi lời gọi MuPDF chạm tới doc_
+    std::unordered_map<int, std::vector<Link>> links_;  // cache, bảo vệ bởi doc_mutex_
 
     std::mutex cache_mutex_;
     std::size_t cache_capacity_ = 48;
@@ -123,6 +150,10 @@ private:
 // ở góc trên-trái trang. Nền trắng. Ném pdf::Error khi lỗi.
 [[nodiscard]] std::unique_ptr<Pixmap> render(const DisplayList& list, const PageBox& box, float scale,
                                              const IRect& rect);
+
+// Đổi màu pixmap theo chế độ đọc: đen -> ink, trắng -> paper (0xRRGGBB), nội suy tuyến tính
+// từng kênh (giữ khử răng cưa của chữ). Ảnh màu cũng bị ánh xạ theo (chế độ Tối đảo màu ảnh).
+void tint(Pixmap& pixmap, std::uint32_t ink, std::uint32_t paper);
 
 // Ghi pixmap ra PNG. Ném pdf::Error khi lỗi.
 void save_png(const Pixmap& pixmap, const std::filesystem::path& path);

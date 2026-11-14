@@ -70,8 +70,9 @@ public:
     [[nodiscard]] double margin() const noexcept { return margin_; }
     [[nodiscard]] double max_page_width() const noexcept { return max_w_; }
     [[nodiscard]] double max_page_height() const noexcept { return max_h_; }
-    // Khổ trang xuất hiện nhiều nhất (point). Dùng cho "vừa chiều rộng"/"vừa trang" để
-    // một vài trang khổ ngang (bảng, hình) không làm các trang dọc bị thu nhỏ.
+    // Khổ trang xuất hiện nhiều nhất (point), hoặc trung vị khi không khổ nào chiếm >= 30% số
+    // trang (sách scan). Dùng cho "vừa chiều rộng"/"vừa trang" để vài trang khổ ngang (bảng,
+    // hình) không làm các trang dọc bị thu nhỏ.
     [[nodiscard]] const PageSize& typical_page() const noexcept { return typical_; }
     [[nodiscard]] double content_width() const noexcept { return content_w_; }
     [[nodiscard]] double content_height() const noexcept { return content_h_; }

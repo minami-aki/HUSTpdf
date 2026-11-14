@@ -15,7 +15,7 @@ namespace pdfread::storage {
 
 namespace {
 
-constexpr int kSchemaVersion = 1;
+constexpr int kSchemaVersion = 2;  // v2: bookmarks
 
 constexpr std::string_view kSchema = R"sql(
 CREATE TABLE IF NOT EXISTS settings(
@@ -33,6 +33,16 @@ CREATE TABLE IF NOT EXISTS translations(
     hits    INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS translations_used ON translations(used);
+
+CREATE TABLE IF NOT EXISTS bookmarks(
+    id          INTEGER PRIMARY KEY,
+    fingerprint TEXT NOT NULL,
+    page        INTEGER NOT NULL,
+    y           REAL NOT NULL DEFAULT 0,
+    title       TEXT NOT NULL DEFAULT '',
+    created     INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS bookmarks_doc ON bookmarks(fingerprint, page, y);
 
 CREATE TABLE IF NOT EXISTS documents(
     fingerprint     TEXT PRIMARY KEY,
@@ -78,6 +88,11 @@ void Store::migrate() {
 }
 
 std::int64_t Store::tick() { return ++clock_; }
+
+std::int64_t Store::sqlite_last_insert_rowid() {
+    auto st = db_->prepare("SELECT last_insert_rowid()");
+    return st.step() ? st.column_int(0) : 0;
+}
 
 // --- cài đặt ---------------------------------------------------------------------------
 
@@ -218,6 +233,41 @@ void Store::set_domain_override(std::string_view fingerprint, std::string_view d
     auto st = db_->prepare("UPDATE documents SET domain_override = ?2 WHERE fingerprint = ?1");
     st.bind(1, fingerprint).bind(2, domain_id);
     st.step();
+}
+
+std::int64_t Store::add_bookmark(std::string_view fingerprint, int page, float y, std::string_view title) {
+    std::lock_guard lock(mutex_);
+    auto st = db_->prepare(
+        "INSERT INTO bookmarks(fingerprint, page, y, title, created) VALUES(?1, ?2, ?3, ?4, ?5)");
+    st.bind(1, fingerprint).bind(2, std::int64_t{page}).bind(3, static_cast<double>(y)).bind(4, title).bind(5, tick());
+    st.step();
+    return sqlite_last_insert_rowid();
+}
+
+void Store::remove_bookmark(std::int64_t id) {
+    std::lock_guard lock(mutex_);
+    auto st = db_->prepare("DELETE FROM bookmarks WHERE id = ?1");
+    st.bind(1, id);
+    st.step();
+}
+
+void Store::rename_bookmark(std::int64_t id, std::string_view title) {
+    std::lock_guard lock(mutex_);
+    auto st = db_->prepare("UPDATE bookmarks SET title = ?2 WHERE id = ?1");
+    st.bind(1, id).bind(2, title);
+    st.step();
+}
+
+std::vector<Bookmark> Store::bookmarks(std::string_view fingerprint) {
+    std::lock_guard lock(mutex_);
+    auto st = db_->prepare("SELECT id, page, y, title FROM bookmarks WHERE fingerprint = ?1 ORDER BY page, y, id");
+    st.bind(1, fingerprint);
+    std::vector<Bookmark> out;
+    while (st.step()) {
+        out.push_back({st.column_int(0), static_cast<int>(st.column_int(1)), static_cast<float>(st.column_double(2)),
+                       st.column_text(3)});
+    }
+    return out;
 }
 
 void Store::set_last_page(std::string_view fingerprint, int page) {

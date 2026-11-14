@@ -82,6 +82,11 @@ public:
     // Tra đúng một thuật ngữ (cả chuỗi `term`, không phân biệt hoa/thường, chấp nhận số nhiều).
     [[nodiscard]] std::optional<TermMatch> lookup(std::u32string_view term) const;
 
+    // Tra ngược: các thuật ngữ tiếng Anh có nghĩa tiếng Việt là `vietnamese` (khớp cả cụm,
+    // không phân biệt hoa/thường); nếu không có, các mục có nghĩa chứa trọn cụm đó. Theo thứ tự
+    // ưu tiên tầng, không trùng, tối đa `max_terms`. Dùng cho tìm kiếm bằng tiếng Việt.
+    [[nodiscard]] std::vector<std::string> english_for(std::u32string_view vietnamese, std::size_t max_terms = 12) const;
+
     [[nodiscard]] const std::vector<GlossaryEntry>& entries() const noexcept { return entries_; }
     [[nodiscard]] std::size_t size() const noexcept { return entries_.size(); }
 

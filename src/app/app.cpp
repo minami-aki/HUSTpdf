@@ -71,6 +71,7 @@ App::App(GLFWwindow* window, const pdf::RootContext& root, AppOptions options)
       }),
       render_(root, 0, [] { glfwPostEmptyEvent(); }),
       text_service_(root, [] { glfwPostEmptyEvent(); }),
+      search_(root, [] { glfwPostEmptyEvent(); }),
       translation_([](const translate::ModelConfig& c) { return std::make_unique<translate::LlamaTranslator>(c); },
                    [] { glfwPostEmptyEvent(); }),
       viewer_(render_, text_service_, textures_),
@@ -85,7 +86,7 @@ App::App(GLFWwindow* window, const pdf::RootContext& root, AppOptions options)
     float ys = 1.0f;
     glfwGetWindowContentScale(window_, &xs, &ys);
     ui_scale_ = std::max(1.0f, xs);
-    ui::apply_style(ui_scale_);
+    ui::apply_style(ui_scale_, false);
 
     // Tầng 1: bảng lĩnh vực + glossary (lĩnh vực, người dùng, tài liệu) — nạp trên luồng loader
     // (~40 file CSV, từ điển chuyên ngành ~1 MB) để cửa sổ hiện ngay. Luồng loader chạy tuần tự
@@ -120,8 +121,28 @@ App::App(GLFWwindow* window, const pdf::RootContext& root, AppOptions options)
     }
     load_settings();
 
+    // Chế độ đọc: tham số dòng lệnh > cài đặt đã lưu.
+    ui::ReadingMode mode = ui::ReadingMode::Normal;
+    if (store_) {
+        if (const auto saved = store_->get("ui.reading_mode")) mode = ui::reading_mode_from_key(*saved).value_or(mode);
+        sidebar_open_ = store_->get_bool("ui.sidebar").value_or(false);
+    }
+    if (options_.reading_mode) mode = *options_.reading_mode;
+    set_reading_mode(mode, false);
+    if (!options_.sidebar.empty()) {
+        sidebar_open_ = true;
+        sidebar_select_ = options_.sidebar == "bookmarks" ? SidebarTab::Bookmarks
+                          : options_.sidebar == "search"  ? SidebarTab::Search
+                                                          : SidebarTab::Outline;
+    }
+    if (!options_.search.empty()) {
+        search_query_ = options_.search;
+        sidebar_open_ = true;
+        sidebar_select_ = SidebarTab::Search;
+    }
+
     glossary_window_.open = options_.open_glossary;
-    if (options_.open_model_window) model_window_.open = true;
+    if (options_.open_model_window) settings_window_.open_at(ui::SettingsWindow::Tab::Model);
     if (options_.fit_page) viewer_.set_zoom_mode(ui::ZoomMode::FitPage);
     if (options_.zoom) viewer_.set_zoom(*options_.zoom);
     if (!options_.open_path.empty()) open_file(options_.open_path);
@@ -141,7 +162,7 @@ App::App(GLFWwindow* window, const pdf::RootContext& root, AppOptions options)
         load_model(model);
     } else {
         log::info("Chưa có mô hình dịch: mở cửa sổ \"Mô hình dịch\" để tải về hoặc chọn file GGUF");
-        if (options_.snapshot_path.empty()) model_window_.open = true;  // lần chạy đầu
+        if (options_.snapshot_path.empty()) settings_window_.open_at(ui::SettingsWindow::Tab::Model);  // lần chạy đầu
     }
 
     start_time_ = glfwGetTime();
@@ -190,11 +211,25 @@ bool App::render_frame() {
     if (pending_scale_) {
         ui_scale_ = *pending_scale_;
         pending_scale_.reset();
-        ui::apply_style(ui_scale_);
+        ui::apply_style(ui_scale_, ui::is_dark(reading_mode_));
     }
 
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
+    // (Sau backend GLFW: backend đưa vị trí con trỏ thật vào trước, sự kiện của ta đến sau nên thắng.)
+    // Kiểm thử --click: khi trang đã hiện đủ, đưa sự kiện chuột thẳng vào ImGui (không đụng chuột thật).
+    if (options_.click && click_step_ < 4 && viewer_.document() && viewer_.fully_rendered() && frame_ > 20) {
+        ImGuiIO& io = ImGui::GetIO();
+        if (click_step_ == 0 || frame_ > click_frame_ + 1) {
+            io.AddMousePosEvent(options_.click->first, options_.click->second);  // giữ vị trí ở mọi bước
+            if (click_step_ == 1) io.AddMouseButtonEvent(ImGuiMouseButton_Left, true);
+            if (click_step_ == 2) io.AddMouseButtonEvent(ImGuiMouseButton_Left, false);
+            if (click_step_ == 3) log::info("CLICK<<{:.0f},{:.0f}>> trang {}", options_.click->first, options_.click->second,
+                                            viewer_.current_page() + 1);
+            ++click_step_;
+            click_frame_ = frame_;
+        }
+    }
     ImGui::NewFrame();
     const bool busy = draw_ui();
     ImGui::Render();
@@ -268,8 +303,21 @@ bool App::draw_ui() {
     const float status_h = ImGui::GetFrameHeight() + 2.0f * ui_scale_;
     ImVec2 avail = ImGui::GetContentRegionAvail();
     avail.y = std::max(1.0f, avail.y - status_h);
+    if (sidebar_open_ && viewer_.document()) {
+        const float sw = std::min(330.0f * ui_scale_, avail.x * 0.45f);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8.0f * ui_scale_, 6.0f * ui_scale_));
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(6.0f * ui_scale_, 4.0f * ui_scale_));
+        ImGui::BeginChild("##sidebar", ImVec2(sw, avail.y), ImGuiChildFlags_AlwaysUseWindowPadding);
+        draw_sidebar();
+        ImGui::EndChild();
+        ImGui::PopStyleVar(2);
+        ImGui::SameLine();
+        avail.x = std::max(1.0f, avail.x - sw);
+    }
     const float fb_scale = ImGui::GetIO().DisplayFramebufferScale.x;
     bool busy = viewer_.draw(avail, ui_scale_, fb_scale > 0 ? fb_scale : 1.0f, frame_);
+    if (auto link = viewer_.take_activated_link()) follow_link(*link);
+    poll_search();
 
     if (!viewer_.document()) {
         const char* hint = loading_ ? "Đang mở tài liệu…" : "Mở file PDF (Ctrl+O) hoặc kéo thả file vào cửa sổ";
@@ -599,14 +647,27 @@ void App::draw_model_window() {
     info.download_dir = options_.model_download_dir;
     info.threads = options_.threads;
     info.default_threads = translate::LlamaTranslator::default_threads();
-    if (store_ && model_window_.open) {
+    if (store_ && settings_window_.open) {
         try {
             info.cache = store_->translation_stats();
         } catch (const std::exception&) {
         }
     }
+    ui::SettingsWindow::State state{reading_mode_, auto_translate_, whole_sentence_, options_.include_context};
+    const ui::SettingsWindow::Result result = settings_window_.draw(state, model_window_, info, ui_scale_);
+    if (result.reading_mode_changed) set_reading_mode(state.reading_mode, true);
+    if (result.translation_changed) {
+        auto_translate_ = state.auto_translate;
+        whole_sentence_ = state.whole_sentence;
+        options_.include_context = state.include_context;
+        if (store_) {
+            store_->set_bool("ui.auto_translate", auto_translate_);
+            store_->set_bool("ui.whole_sentence", whole_sentence_);
+            store_->set_bool("ui.include_context", options_.include_context);
+        }
+    }
     using Action = ui::ModelWindow::Action;
-    switch (model_window_.draw(info, ui_scale_)) {
+    switch (result.model) {
         case Action::ChooseFile: choose_model_dialog(); break;
         case Action::Downloaded: {
             const std::filesystem::path path = model_window_.downloaded_path();
@@ -632,6 +693,7 @@ void App::load_settings() {
     try {
         auto_translate_ = store_->get_bool("ui.auto_translate").value_or(auto_translate_);
         whole_sentence_ = store_->get_bool("ui.whole_sentence").value_or(whole_sentence_);
+        if (!options_.include_context) options_.include_context = store_->get_bool("ui.include_context").value_or(false);
         if (options_.threads == 0) options_.threads = std::max(0, store_->get_int("model.threads").value_or(0));
     } catch (const std::exception& e) {
         log::warn("Không đọc được cài đặt: {}", e.what());
@@ -679,15 +741,33 @@ void App::draw_toolbar() {
     ImGui::BeginChild("##toolbar", ImVec2(0, height), ImGuiChildFlags_AlwaysUseWindowPadding,
                       ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
+    const bool has_doc = viewer_.document() != nullptr;
+    ImGui::BeginDisabled(!has_doc);
+    if (ImGui::Button(sidebar_open_ ? "≡ Ẩn" : "≡")) {
+        sidebar_open_ = !sidebar_open_;
+        if (store_) store_->set_bool("ui.sidebar", sidebar_open_);
+    }
+    ImGui::EndDisabled();
+    ImGui::SetItemTooltip("Thanh bên: mục lục, dấu trang, tìm kiếm (F4)");
+    ImGui::SameLine();
     if (ImGui::Button("Mở…")) open_dialog();
     ImGui::SetItemTooltip("Mở file PDF (Ctrl+O)");
-
-    const bool has_doc = viewer_.document() != nullptr;
     const int count = viewer_.page_count();
     const int current = viewer_.current_page();
 
     ImGui::SameLine(0, 18.0f * ui_scale_);
     ImGui::BeginDisabled(!has_doc);
+
+    ImGui::BeginDisabled(back_.empty());
+    if (ImGui::Button("←")) go_back();
+    ImGui::EndDisabled();
+    ImGui::SetItemTooltip("Quay lại vị trí trước (Alt+←, nút Back của chuột)");
+    ImGui::SameLine();
+    ImGui::BeginDisabled(forward_.empty());
+    if (ImGui::Button("→")) go_forward();
+    ImGui::EndDisabled();
+    ImGui::SetItemTooltip("Tiến tới (Alt+→)");
+    ImGui::SameLine(0, 12.0f * ui_scale_);
 
     ImGui::BeginDisabled(current <= 0);
     if (ImGui::ArrowButton("##prev", ImGuiDir_Left)) viewer_.go_to_page(current - 1);
@@ -763,8 +843,11 @@ void App::draw_toolbar() {
     if (ImGui::Checkbox("Dịch tự động", &auto_translate_) && store_) store_->set_bool("ui.auto_translate", auto_translate_);
     ImGui::SetItemTooltip("Dịch ngay khi bôi đen xong. Tắt thì dịch bằng Ctrl+T.");
     ImGui::SameLine();
-    if (ImGui::Button("Mô hình…")) model_window_.open = !model_window_.open;
-    ImGui::SetItemTooltip("Mô hình dịch: tải về, chọn file GGUF, số luồng, cache bản dịch");
+    if (ImGui::Button("Cài đặt…")) {
+        if (settings_window_.open) settings_window_.open = false;
+        else settings_window_.open_at(ui::SettingsWindow::Tab::Display);
+    }
+    ImGui::SetItemTooltip("Chế độ đọc, tùy chọn dịch, mô hình dịch (Ctrl+,)");
     if (glossary_) {
         ImGui::SameLine(0, 18.0f * ui_scale_);
         draw_domain_combo();
@@ -809,6 +892,7 @@ void App::handle_shortcuts() {
     if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_O)) open_dialog();
     if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_G) && glossary_) glossary_window_.open = !glossary_window_.open;
     if (!viewer_.document()) return;
+    handle_reader_shortcuts();
     if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_T)) request_translation();
     if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_C) && viewer_.has_selection()) {
         ImGui::SetClipboardText(viewer_.selection_text().c_str());
@@ -854,6 +938,7 @@ void App::open_file(const std::filesystem::path& path) {
         r.path = path;
         try {
             r.doc = pdf::Document::open(path);
+            r.outline = r.doc->outline();
         } catch (const std::exception& e) {
             r.error = e.what();
         }
@@ -946,11 +1031,20 @@ void App::poll_open_results() {
             continue;
         }
         viewer_.set_document(r.doc);
+        search_.set_document(r.doc);
         set_status(file_name_utf8(r.path), false);
+        outline_ = std::move(r.outline);
+        back_.clear();
+        forward_.clear();
+        search_hits_.clear();
+        search_current_ = -1;
+        searched_query_.clear();
+        search_running_ = false;
         auto_domains_ = std::move(r.domains);
         domain_override_ = r.domain_override;
         if (catalog_ && !domain_override_.empty() && catalog_->find(domain_override_) == nullptr) domain_override_.clear();
         doc_fingerprint_ = r.fingerprint;
+        reload_bookmarks();
         if (glossary_) {
             glossary_->set_document(r.path);
             apply_domains();
@@ -968,6 +1062,10 @@ void App::poll_open_results() {
                 explicit_page = true;
             }
             if (options_.select) viewer_.select(options_.select->a, options_.select->b, options_.select->unit);
+            if (!options_.search.empty()) {
+                start_search();
+                search_start_page_ = options_.start_page.value_or(0);  // lệnh nhảy trang chưa áp dụng
+            }
         }
         // Mở lại tài liệu: về trang đang đọc lần trước (không áp dụng khi chụp ảnh kiểm thử).
         if (!explicit_page && r.last_page > 0 && options_.snapshot_path.empty()) {
@@ -988,7 +1086,8 @@ void App::update_snapshot(int fb_width, int fb_height) {
         options_.select && translation_.model_state() != translate::ModelState::None &&
         (translate_at_ > 0 || popup_.busy() || (auto_translate_ && viewer_.has_selection() && !popup_.visible()));
     const bool ready = viewer_.document() && viewer_.fully_rendered() && !render_.busy() &&
-                       (!options_.select || viewer_.selection_complete()) && !waiting_translation;
+                       (!options_.select || viewer_.selection_complete()) && !waiting_translation &&
+                       !search_running_ && (!options_.click || (click_step_ >= 4 && frame_ > click_frame_ + 10));
     snapshot_stable_frames_ = ready ? snapshot_stable_frames_ + 1 : 0;
     const bool timed_out = glfwGetTime() - start_time_ > kSnapshotTimeoutSeconds;
     const bool failed_open = !loading_ && !viewer_.document() && frame_ > 2;

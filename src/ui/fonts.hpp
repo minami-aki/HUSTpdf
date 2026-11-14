@@ -12,6 +12,7 @@ inline constexpr float kBaseFontSize = 16.0f;
 bool load_fonts(const std::filesystem::path& font_dir);
 
 // Đặt style giao diện cho hệ số DPI `scale` (gọi lại khi đổi màn hình).
-void apply_style(float scale);
+// Theme giao diện (sáng/tối) + kích thước theo hệ số DPI.
+void apply_style(float scale, bool dark = false);
 
 }  // namespace pdfread::ui

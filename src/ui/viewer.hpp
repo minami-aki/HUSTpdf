@@ -25,6 +25,21 @@ namespace pdfread::ui {
 
 enum class ZoomMode { Custom, FitWidth, FitPage };
 
+// Vị trí đọc: trang + điểm (point từ mép trên trang) ở mép trên vùng nhìn.
+struct Location {
+    int page = 0;
+    float y = 0;
+    friend bool operator==(const Location&, const Location&) = default;
+};
+
+// Màu trang (chế độ đọc): pdf::TileKey::ink / paper — nét đen -> ink, nền trắng -> paper.
+struct PageColors {
+    std::uint32_t ink = 0x000000;
+    std::uint32_t paper = 0xFFFFFF;
+    ImU32 background = IM_COL32(0xD5, 0xD8, 0xDC, 0xFF);  // nền quanh trang
+    friend bool operator==(const PageColors&, const PageColors&) = default;
+};
+
 class Viewer {
 public:
     static constexpr double kMinZoom = 0.1;
@@ -48,6 +63,25 @@ public:
     [[nodiscard]] ZoomMode zoom_mode() const noexcept { return mode_; }
 
     void go_to_page(int index);
+    // Đưa điểm `y` (point từ mép trên trang) của trang `page` lên gần mép trên vùng nhìn.
+    void go_to(int page, float y);
+    [[nodiscard]] Location location() const;
+
+    // Liên kết người dùng vừa bấm (một lần nhấn, không kéo); lấy ra một lần.
+    [[nodiscard]] std::optional<pdf::Link> take_activated_link() {
+        auto l = std::move(activated_link_);
+        activated_link_.reset();
+        return l;
+    }
+
+    // Tô kết quả tìm kiếm: các khung (point) theo trang; `current` tô đậm hơn.
+    void set_search_highlights(std::unordered_map<int, std::vector<text::Box>> hits, int current_page,
+                               std::vector<text::Box> current);
+    void clear_search_highlights();
+
+    // Màu trang theo chế độ đọc (thay đổi -> render lại tile).
+    void set_page_colors(const PageColors& colors);
+    [[nodiscard]] const PageColors& page_colors() const noexcept { return colors_; }
     [[nodiscard]] int current_page() const noexcept { return current_page_; }
     [[nodiscard]] int page_count() const noexcept { return doc_ ? doc_->page_count() : 0; }
 
@@ -91,8 +125,10 @@ private:
     };
     struct TextEntry {
         pdf::TextPagePtr text;
+        std::vector<pdf::Link> links;
         std::uint64_t last_used = 0;
     };
+    [[nodiscard]] const pdf::Link* link_at(const PagePoint& p) const;
 
     void receive_results(std::uint64_t frame);
     bool update_layout(float ui_scale, float fb_scale);
@@ -100,6 +136,7 @@ private:
     bool handle_selection_input(const ImRect& inner);
     void zoom_at(ImVec2 anchor, double zoom);
     void clamp_scroll();
+    void center_page_horizontally(int page);
     [[nodiscard]] double x_offset() const noexcept;
     [[nodiscard]] ViewTransform make_view(const ImVec2& origin) const noexcept;
     void draw_page(ImDrawList* dl, int page, const ImVec2& origin, float fb_scale, std::uint64_t frame);
@@ -125,6 +162,16 @@ private:
     double scroll_y_ = 0;
     bool pending_scroll_ = false;
     std::optional<int> pending_page_;
+    float pending_y_ = -1;  // cùng pending_page_: điểm cần đưa lên mép trên (< 0: đầu trang)
+    std::optional<pdf::Link> pressed_link_;  // liên kết dưới chuột lúc nhấn
+    ImVec2 press_pos_;
+    std::optional<pdf::Link> activated_link_;
+    std::optional<pdf::Link> hovered_link_;
+    int hovered_link_page_ = -1;
+    std::unordered_map<int, std::vector<text::Box>> search_hits_;
+    int search_current_page_ = -1;
+    std::vector<text::Box> search_current_;
+    PageColors colors_;
     bool panning_ = false;
     int current_page_ = 0;
     ViewTransform view_;

@@ -1,5 +1,8 @@
 #include "pdf/document.hpp"
 
+#include <algorithm>
+#include <cmath>
+
 #include <atomic>
 #include <format>
 #include <utility>
@@ -218,6 +221,107 @@ DisplayListPtr Document::build_display_list(int index) {
     return std::make_shared<const DisplayList>(list);
 }
 
+namespace {
+
+// Tọa độ đích (không gian trang của MuPDF) -> point từ mép trên trang của ta; NaN -> -1.
+float dest_y(float y, const PageBox& box) { return std::isnan(y) ? -1.0f : std::max(0.0f, y - box.y0); }
+
+}  // namespace
+
+std::vector<OutlineItem> Document::outline(std::size_t max_items) {
+    fz_context* c = require_ctx();
+    std::vector<OutlineItem> out;
+    std::lock_guard lock(doc_mutex_);
+    fz_outline* root = nullptr;
+    fz_var(root);
+    fz_try(c) { root = fz_load_outline(c, doc_); }
+    fz_catch(c) {
+        fz_report_error(c);
+        root = nullptr;
+    }
+    if (root == nullptr) return out;
+    struct Frame {
+        fz_outline* node;
+        int level;
+    };
+    std::vector<Frame> stack{{root, 0}};
+    while (!stack.empty() && out.size() < max_items) {
+        const Frame f = stack.back();
+        stack.pop_back();
+        if (f.node == nullptr) continue;
+        OutlineItem item;
+        item.title = f.node->title != nullptr ? f.node->title : "";
+        item.level = f.level;
+        int page = -1;
+        fz_var(page);
+        fz_try(c) { page = fz_page_number_from_location(c, doc_, f.node->page); }
+        fz_catch(c) { page = -1; }
+        if (page >= 0 && page < page_count()) {
+            item.page = page;
+            item.y = dest_y(f.node->y, pages_[static_cast<std::size_t>(page)]);
+        }
+        if (f.node->uri != nullptr && item.page < 0) {
+            int external = 0;
+            fz_var(external);
+            fz_try(c) { external = fz_is_external_link(c, f.node->uri); }
+            fz_catch(c) { external = 0; }
+            if (external) item.uri = f.node->uri;
+        }
+        out.push_back(std::move(item));
+        stack.push_back({f.node->next, f.level});
+        stack.push_back({f.node->down, f.level + 1});
+    }
+    fz_drop_outline(c, root);
+    return out;
+}
+
+std::vector<Link> Document::links(int index) {
+    if (index < 0 || index >= page_count()) return {};
+    fz_context* c = require_ctx();
+    std::lock_guard lock(doc_mutex_);
+    if (auto it = links_.find(index); it != links_.end()) return it->second;
+    const PageBox& box = pages_[static_cast<std::size_t>(index)];
+    std::vector<Link> out;
+    fz_page* page = nullptr;
+    fz_link* head = nullptr;
+    fz_var(page);
+    fz_var(head);
+    fz_try(c) {
+        page = fz_load_page(c, doc_, index);
+        head = fz_load_links(c, page);
+        for (fz_link* l = head; l != nullptr; l = l->next) {
+            if (l->uri == nullptr || fz_is_empty_rect(l->rect)) continue;
+            Link link;
+            link.x0 = l->rect.x0 - box.x0;
+            link.y0 = l->rect.y0 - box.y0;
+            link.x1 = l->rect.x1 - box.x0;
+            link.y1 = l->rect.y1 - box.y0;
+            if (fz_is_external_link(c, l->uri)) {
+                link.uri = l->uri;
+            } else {
+                float x = 0;
+                float y = 0;
+                const fz_location loc = fz_resolve_link(c, doc_, l->uri, &x, &y);
+                const int target = fz_page_number_from_location(c, doc_, loc);
+                if (target < 0 || target >= page_count()) continue;
+                link.page = target;
+                link.y = dest_y(y, pages_[static_cast<std::size_t>(target)]);
+            }
+            out.push_back(std::move(link));
+        }
+    }
+    fz_always(c) {
+        fz_drop_link(c, head);
+        fz_drop_page(c, page);
+    }
+    fz_catch(c) {
+        fz_report_error(c);
+        out.clear();
+    }
+    links_.emplace(index, out);
+    return out;
+}
+
 std::vector<std::string> Document::outline_titles(std::size_t max_items) {
     fz_context* c = require_ctx();
     std::vector<std::string> out;
@@ -274,6 +378,12 @@ std::unique_ptr<Pixmap> render(const DisplayList& list, const PageBox& box, floa
     }
     if (pix == nullptr) fail("Không render được trang", err);
     return std::make_unique<Pixmap>(pix);
+}
+
+void tint(Pixmap& pixmap, std::uint32_t ink, std::uint32_t paper) {
+    fz_context* c = require_ctx();
+    fz_try(c) { fz_tint_pixmap(c, pixmap.get(), static_cast<int>(ink), static_cast<int>(paper)); }
+    fz_catch(c) { fz_report_error(c); }
 }
 
 void save_png(const Pixmap& pixmap, const std::filesystem::path& path) {

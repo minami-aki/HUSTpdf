@@ -17,6 +17,7 @@ Trình đọc PDF khoa học – kỹ thuật, dịch Anh → Việt tức thờ
 | M4 | Tầng 2: làm sạch, tách câu, ngữ cảnh | xong (ngữ cảnh viết sẵn nhưng tắt mặc định, xem DECISIONS) |
 | M5 | Tầng 1: lĩnh vực, glossary, placeholder, hậu kiểm | xong (glossary 37 lĩnh vực là bản nháp, cần duyệt) |
 | M6 | Cache SQLite, tải mô hình, đánh giá, CI, đóng gói | xong (CI chạy khi repo có remote GitHub) |
+| M7 | Mục lục, link, Quay lại/Tiến tới, dấu trang, tìm kiếm (cả tiếng Việt), chế độ màu trang, cửa sổ Cài đặt | xong |
 
 ## Build (Windows)
 
@@ -78,6 +79,7 @@ Glossary vẫn là các file CSV (xem dưới).
 .\build\release\bin\HUSTpdf.exe [file.pdf] [--page N] [--zoom 150 | --fit-page] [--timing] [--verbose]
                                 [--model file.gguf] [--threads N] [--repack] [--gen-prompt]
                                 [--no-cache] [--db file.db]
+                                [--search "cụm từ"] [--reading-mode normal|sepia|dark|warm] [--sidebar]
 ```
 
 | Phím / thao tác | Tác dụng |
@@ -95,6 +97,13 @@ Glossary vẫn là các file CSV (xem dưới).
 | Ctrl+C, Esc | Sao chép vùng chọn, bỏ chọn |
 | (thả chuột) / Ctrl+T | Dịch vùng chọn: tự động sau 250 ms nếu bật "Dịch tự động", hoặc thủ công |
 | Ctrl+G | Mở cửa sổ glossary (xem, tìm, sửa, nhập/xuất CSV, thuật ngữ trích từ tài liệu) |
+| F4, nút ≡ | Ẩn/hiện thanh bên: Mục lục / Dấu trang / Tìm kiếm |
+| Nhấn vào link | Đi tới đích (link trong tài liệu) hoặc mở trình duyệt (http, https, mailto) |
+| Alt+← / Alt+→, nút chuột Back/Forward | Quay lại / tiến tới vị trí trước khi nhảy (link, mục lục, dấu trang, kết quả tìm) |
+| Ctrl+F, F3 / Shift+F3 | Tìm trong toàn tài liệu, kết quả kế tiếp / trước. Gõ tiếng Việt (vd. "độ phản ứng") thì tìm các thuật ngữ tiếng Anh tương ứng trong glossary |
+| Ctrl+D | Thêm dấu trang tại vị trí đang đọc |
+| F9 | Đổi chế độ màu trang: Bình thường → Sepia → Tối → Ấm |
+| Ctrl+, | Cửa sổ Cài đặt (hiển thị, dịch, mô hình dịch) |
 | | Bôi đen một phần câu: dịch cả câu (tô vàng nhạt trên trang); đổi sang "chỉ phần chọn" ngay trong popup. Một từ / cụm ≤ 4 từ: dịch đúng phần chọn |
 
 Tham số mô hình: `--threads N` số luồng suy luận (mặc định = số nhân vật lý, tối đa 8); `--repack` sắp xếp lại trọng số cho AVX2/AVX-512 (prompt dài xử lý nhanh hơn nhưng tốn thêm ~700 MB RAM); `--gen-prompt` kết thúc prompt bằng `<｜hy_Assistant｜>` thay vì như ví dụ chính thức; `--context` (thử nghiệm) thêm 1 câu trước/sau vào prompt bằng mẫu ngữ cảnh — mặc định tắt vì làm hỏng bản dịch với mô hình 1.8B Q4.
@@ -116,11 +125,13 @@ python tools\dict\import_md_dictionary.py Tu_dien_Ky_thuat_Hat_nhan.md data\glos
 .\build\release\bin\pdfread-translate.exe --model models\HY-MT1.5-1.8B-Q4_K_M.gguf "The kernel schedules threads."
 .\build\release\bin\pdfread-translate.exe --model ... --context "câu xung quanh" --term "stress=ứng suất" "..."
 .\build\release\bin\HUSTpdf.exe sample.pdf --glossary --snapshot out.png   # mở sẵn cửa sổ glossary
-.\build\release\bin\HUSTpdf.exe sample.pdf --model-window --snapshot out.png   # mở sẵn cửa sổ "Mô hình dịch"
+.\build\release\bin\HUSTpdf.exe sample.pdf --model-window --snapshot out.png   # mở sẵn Cài đặt ở thẻ "Mô hình dịch"
+.\build\release\bin\HUSTpdf.exe book.pdf --sidebar --search "delayed neutron" --reading-mode sepia --snapshot out.png
+.\build\release\bin\HUSTpdf.exe paper.pdf --click 302,462 --snapshot out.png   # bấm chuột trái tại tọa độ cửa sổ (pixel)
 # Test với mô hình thật / cần mạng (mặc định bị ẩn; "[network]" tải tiếp 4 MB cuối của mô hình từ Hugging Face):
 $env:PDFREAD_TEST_MODEL = "models\HY-MT1.5-1.8B-Q4_K_M.gguf"; .\build\release\bin\pdfread_tests.exe "[model]"; .\build\release\bin\pdfread_tests.exe "[network]"
 ```
-Ở chế độ `--snapshot`, text của vùng chọn và bản dịch (nếu có mô hình) được ghi ra log dạng `SELECTION<<...>>`, `TRANSLATION<<...>>`.
+Ở chế độ `--snapshot`, text của vùng chọn và bản dịch (nếu có mô hình) được ghi ra log dạng `SELECTION<<...>>`, `TRANSLATION<<...>>`, `SEARCH<<...>>` (số kết quả), `CLICK<<...>>`.
 
 ## Đánh giá chất lượng dịch
 

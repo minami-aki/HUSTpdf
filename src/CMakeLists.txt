@@ -27,6 +27,7 @@ add_library(pdfread_text STATIC
     text/page_text.cpp
     text/protect.cpp
     text/reading_order.cpp
+    text/search.cpp
     text/sentence_splitter.cpp
 )
 target_link_libraries(pdfread_text
@@ -55,6 +56,7 @@ add_library(pdfread_pdf STATIC
     pdf/context.cpp
     pdf/document.cpp
     pdf/render_service.cpp
+    pdf/search_service.cpp
     pdf/text_page.cpp
     pdf/text_service.cpp
 )
@@ -110,7 +112,9 @@ add_library(pdfread_ui STATIC
     ui/model_window.cpp
     ui/page_layout.cpp
     ui/selection.cpp
+    ui/settings_window.cpp
     ui/texture_cache.cpp
+    ui/theme.cpp
     ui/translation_popup.cpp
     ui/viewer.cpp
 )
@@ -132,6 +136,7 @@ target_link_libraries(pdfread_eval PRIVATE pdfread_translate pdfread_terminology
 # --- app --------------------------------------------------------------------
 add_executable(pdfread
     app/app.cpp
+    app/app_reader.cpp
     app/main.cpp
 )
 target_compile_definitions(pdfread PRIVATE

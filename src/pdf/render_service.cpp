@@ -90,6 +90,7 @@ void RenderService::run_one() {
         DisplayListPtr list = doc->display_list(key.page);
         ScopedTimer timer(std::format("render p{} tile {},{} @{:.3f}", key.page + 1, key.col, key.row, scale));
         result.pixmap = render(*list, box, scale, rect);
+        if (key.ink != 0x000000 || key.paper != 0xFFFFFF) tint(*result.pixmap, key.ink, key.paper);
     } catch (const std::exception& e) {
         result.error = e.what();
         log::warn("render p{} tile {},{} lỗi: {}", key.page + 1, key.col, key.row, e.what());

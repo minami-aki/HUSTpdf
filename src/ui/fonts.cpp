@@ -33,10 +33,14 @@ bool load_fonts(const std::filesystem::path& font_dir) {
     return true;
 }
 
-void apply_style(float scale) {
+void set_dark_ui(bool dark) noexcept;  // theme.cpp
+
+void apply_style(float scale, bool dark) {
     ImGuiStyle& style = ImGui::GetStyle();
     style = ImGuiStyle();
-    ImGui::StyleColorsLight(&style);
+    if (dark) ImGui::StyleColorsDark(&style);
+    else ImGui::StyleColorsLight(&style);
+    set_dark_ui(dark);
     style.WindowRounding = 0.0f;
     style.ChildRounding = 0.0f;
     style.FrameRounding = 4.0f;
@@ -48,7 +52,7 @@ void apply_style(float scale) {
     style.ItemSpacing = ImVec2(6.0f, 4.0f);
     style.WindowBorderSize = 0.0f;
     style.ChildBorderSize = 0.0f;
-    style.Colors[ImGuiCol_WindowBg] = ImVec4(0.96f, 0.96f, 0.97f, 1.0f);
+    style.Colors[ImGuiCol_WindowBg] = dark ? ImVec4(0.13f, 0.14f, 0.15f, 1.0f) : ImVec4(0.96f, 0.96f, 0.97f, 1.0f);
     style.ScaleAllSizes(scale);
     style.FontSizeBase = kBaseFontSize;
     style.FontScaleDpi = scale;

@@ -184,16 +184,21 @@ void ModelWindow::draw_download(const Info& info, float ui_scale, Action& action
 }
 
 ModelWindow::Action ModelWindow::draw(const Info& info, float ui_scale) {
-    if (threads_ < 0) threads_ = info.threads;
     if (!open) return Action::None;
-    Action action = Action::None;
-
     ImGui::SetNextWindowSize(ImVec2(640 * ui_scale, 0), ImGuiCond_Appearing);
     ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
     if (!ImGui::Begin("Mô hình dịch", &open, ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse)) {
         ImGui::End();
-        return action;
+        return Action::None;
     }
+    const Action action = draw_contents(info, ui_scale);
+    ImGui::End();
+    return action;
+}
+
+ModelWindow::Action ModelWindow::draw_contents(const Info& info, float ui_scale) {
+    if (threads_ < 0) threads_ = info.threads;
+    Action action = Action::None;
 
     ImGui::SeparatorText("Mô hình đang dùng");
     ImGui::PushTextWrapPos(0);
@@ -240,7 +245,6 @@ ModelWindow::Action ModelWindow::draw(const Info& info, float ui_scale) {
         ImGui::TextDisabled("Không dùng được cơ sở dữ liệu cache (xem log).");
     }
 
-    ImGui::End();
     return action;
 }
 

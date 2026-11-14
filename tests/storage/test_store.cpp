@@ -147,3 +147,24 @@ TEST_CASE("Domain list encoding", "[storage]") {
     CHECK(decode_domains("").empty());
     CHECK(decode_domains("bad;x:1").size() == 1);
 }
+
+TEST_CASE("Store keeps bookmarks per document in page order", "[storage]") {
+    auto store = Store::open_in_memory();
+    const auto b1 = store->add_bookmark("docA", 10, 120.5f, "Chương 2 — tr. 11");
+    const auto b2 = store->add_bookmark("docA", 3, 0.0f, "Trang 4");
+    store->add_bookmark("docB", 1, 0.0f, "khác");
+    auto list = store->bookmarks("docA");
+    REQUIRE(list.size() == 2);
+    CHECK(list[0].page == 3);
+    CHECK(list[1].page == 10);
+    CHECK(list[1].y > 120.0f);
+    CHECK(list[1].title == "Chương 2 — tr. 11");
+    CHECK(list[1].id == b1);
+    store->rename_bookmark(b2, "Mở đầu");
+    store->remove_bookmark(b1);
+    list = store->bookmarks("docA");
+    REQUIRE(list.size() == 1);
+    CHECK(list[0].title == "Mở đầu");
+    CHECK(store->bookmarks("docB").size() == 1);
+    CHECK(store->bookmarks("none").empty());
+}

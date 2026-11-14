@@ -175,3 +175,20 @@ TEST_CASE("GlossaryIndex matches all-caps abbreviations case-sensitively", "[ter
     CHECK(idx.find_in(U"A loca is not an acronym here.").empty());
     CHECK(idx.lookup(U"americium-241"));  // thuật ngữ thường: không phân biệt hoa/thường
 }
+
+TEST_CASE("english_for finds English terms from a Vietnamese meaning", "[terminology][glossary]") {
+    GlossaryEntry s1 = entry("stress", "ứng suất", Layer::PrimaryDomain);
+    GlossaryEntry s2 = entry("von Mises stress", "ứng suất von Mises", Layer::PrimaryDomain);
+    GlossaryEntry s3 = entry("stress", "căng thẳng", Layer::Unrelated, 100, "economics.business");
+    GlossaryEntry r = entry("Reactivity", "độ phản ứng", Layer::PrimaryDomain);
+    r.aliases = {"Reactivity Worth=giá trị độ phản ứng"};
+    const terminology::GlossaryIndex idx({s1, s2, s3, r});
+    // Khớp cả cụm (không phân biệt hoa thường).
+    CHECK(idx.english_for(U"Ứng suất") == std::vector<std::string>{"stress"});
+    CHECK(idx.english_for(U"căng thẳng") == std::vector<std::string>{"stress"});
+    // Không có mục trùng hoàn toàn: các mục chứa trọn cụm (cả tên gọi khác).
+    const auto partial = idx.english_for(U"phản ứng");
+    CHECK(partial.size() == 2);
+    CHECK(idx.english_for(U"uất").empty());  // chỉ khớp trọn tiếng (không khớp giữa chừng)
+    CHECK(idx.english_for(U"").empty());
+}

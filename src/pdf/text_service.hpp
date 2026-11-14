@@ -28,6 +28,7 @@ struct TextResult {
     std::uint64_t doc = 0;
     int page = 0;
     TextPagePtr text;  // nullptr nếu lỗi
+    std::vector<Link> links;  // liên kết trên trang (nạp cùng lúc, ở luồng nền)
     std::string error;
 };
 

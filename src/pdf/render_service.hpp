@@ -32,6 +32,9 @@ struct TileKey {
     int scale_q = 0;
     int col = 0;
     int row = 0;
+    // Màu trang (chế độ đọc): nét đen -> ink, nền trắng -> paper (0xRRGGBB). Mặc định: không đổi.
+    std::uint32_t ink = 0x000000;
+    std::uint32_t paper = 0xFFFFFF;
 
     friend bool operator==(const TileKey&, const TileKey&) = default;
 };
@@ -39,7 +42,7 @@ struct TileKey {
 struct TileKeyHash {
     std::size_t operator()(const TileKey& k) const noexcept {
         std::uint64_t h = k.doc * 0x9E3779B97F4A7C15ull;
-        for (int v : {k.page, k.scale_q, k.col, k.row}) {
+        for (int v : {k.page, k.scale_q, k.col, k.row, static_cast<int>(k.ink), static_cast<int>(k.paper)}) {
             h ^= static_cast<std::uint64_t>(static_cast<std::uint32_t>(v)) + 0x9E3779B97F4A7C15ull + (h << 6) + (h >> 2);
         }
         return static_cast<std::size_t>(h);

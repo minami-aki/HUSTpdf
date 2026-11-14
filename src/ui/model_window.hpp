@@ -40,6 +40,8 @@ public:
     bool open = false;
 
     Action draw(const Info& info, float ui_scale);
+    // Nội dung (không mở cửa sổ riêng) — dùng trong tab "Mô hình dịch" của cửa sổ Cài đặt.
+    Action draw_contents(const Info& info, float ui_scale);
 
     // Sau Action::Downloaded: đường dẫn file mô hình vừa tải.
     [[nodiscard]] std::filesystem::path downloaded_path() const { return downloader_.dest(); }

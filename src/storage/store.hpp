@@ -6,6 +6,7 @@
 //                   đã chuẩn hóa + placeholder, ngữ cảnh, đúng các thuật ngữ glossary được
 //                   chỉ định — + tên mô hình + biến thể chat template). Lưu bản dịch THÔ
 //                   (còn placeholder) để khôi phục + hậu kiểm như khi dịch thật;
+//  - bookmarks    : dấu trang người dùng đặt, theo dấu vân tay tài liệu (v2);
 //  - documents    : thông tin theo tài liệu, khóa = dấu vân tay file (xem
 //                   document_fingerprint): lĩnh vực tự phân loại (kèm phiên bản bảng lĩnh
 //                   vực), lĩnh vực người dùng ghi đè, trang đang đọc.
@@ -35,6 +36,13 @@ struct DocumentInfo {
     std::vector<translate::DomainScore> domains;
     std::string domain_override;  // rỗng = theo phân loại tự động
     int last_page = 0;            // 0-based
+};
+
+struct Bookmark {
+    std::int64_t id = 0;
+    int page = 0;      // 0-based
+    float y = 0;       // point từ mép trên trang
+    std::string title;
 };
 
 struct CacheStats {
@@ -76,10 +84,17 @@ public:
     void set_domain_override(std::string_view fingerprint, std::string_view domain_id);
     void set_last_page(std::string_view fingerprint, int page);
 
+    // --- dấu trang (theo tài liệu) ---
+    std::int64_t add_bookmark(std::string_view fingerprint, int page, float y, std::string_view title);
+    void remove_bookmark(std::int64_t id);
+    void rename_bookmark(std::int64_t id, std::string_view title);
+    [[nodiscard]] std::vector<Bookmark> bookmarks(std::string_view fingerprint);  // theo thứ tự trang
+
 private:
     explicit Store(std::unique_ptr<Database> db);
     void migrate();
     [[nodiscard]] std::int64_t tick();
+    [[nodiscard]] std::int64_t sqlite_last_insert_rowid();
 
     std::mutex mutex_;
     std::unique_ptr<Database> db_;

@@ -328,6 +328,41 @@ std::optional<TermMatch> GlossaryIndex::lookup(std::u32string_view term) const {
     return std::nullopt;
 }
 
+std::vector<std::string> GlossaryIndex::english_for(std::u32string_view vietnamese, std::size_t max_terms) const {
+    const std::u32string q = fold(to_utf8(vietnamese));
+    std::vector<std::string> out;
+    if (q.empty()) return out;
+    std::vector<const GlossaryEntry*> exact;
+    std::vector<const GlossaryEntry*> partial;
+    for (const GlossaryEntry& e : entries_) {
+        if (e.term_vi.empty()) continue;
+        const std::u32string vi = fold(e.term_vi);
+        if (vi == q) {
+            exact.push_back(&e);
+        } else if (const std::size_t pos = vi.find(q); pos != std::u32string::npos) {
+            const bool start_ok = pos == 0 || vi[pos - 1] == U' ';
+            const std::size_t end = pos + q.size();
+            const bool end_ok = end == vi.size() || vi[end] == U' ' || vi[end] == U',';
+            if (start_ok && end_ok) partial.push_back(&e);
+        }
+    }
+    auto by_priority = [](const GlossaryEntry* a, const GlossaryEntry* b) {
+        return a->layer != b->layer ? a->layer < b->layer : a->rank < b->rank;
+    };
+    std::stable_sort(exact.begin(), exact.end(), by_priority);
+    std::stable_sort(partial.begin(), partial.end(), by_priority);
+    auto add = [&](const GlossaryEntry* e) {
+        if (out.size() >= max_terms) return;
+        const bool dup = std::any_of(out.begin(), out.end(), [&](const std::string& t) { return fold(t) == fold(e->term_en); });
+        if (!dup) out.push_back(e->term_en);
+    };
+    for (const GlossaryEntry* e : exact) add(e);
+    if (out.empty()) {
+        for (const GlossaryEntry* e : partial) add(e);
+    }
+    return out;
+}
+
 std::vector<GlossaryEntry> check_terms(std::string_view translation, const std::vector<GlossaryEntry>& required) {
     const std::u32string out = fold(translation);
     std::vector<GlossaryEntry> missing;

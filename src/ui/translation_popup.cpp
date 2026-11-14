@@ -4,12 +4,15 @@
 #include <cfloat>
 #include <format>
 
+#include "ui/theme.hpp"
+
 namespace pdfread::ui {
 namespace {
 
-constexpr ImVec4 kWarnColor{0.72f, 0.38f, 0.0f, 1.0f};
-constexpr ImVec4 kErrorColor{0.75f, 0.1f, 0.1f, 1.0f};
-constexpr ImVec4 kTermColor{0.10f, 0.35f, 0.65f, 1.0f};
+// Màu theo theme giao diện (sáng / tối).
+ImVec4 warn_color() { return dark_ui() ? ImVec4(1.0f, 0.66f, 0.28f, 1.0f) : ImVec4(0.72f, 0.38f, 0.0f, 1.0f); }
+ImVec4 error_color() { return dark_ui() ? ImVec4(1.0f, 0.45f, 0.45f, 1.0f) : ImVec4(0.75f, 0.1f, 0.1f, 1.0f); }
+ImVec4 term_color() { return dark_ui() ? ImVec4(0.50f, 0.75f, 1.0f, 1.0f) : ImVec4(0.10f, 0.35f, 0.65f, 1.0f); }
 
 }  // namespace
 
@@ -71,7 +74,7 @@ void TranslationPopup::draw_glossary_answer() {
     ImGui::PushTextWrapPos(0.0f);
     ImGui::TextDisabled("%s", answer_.canonical.empty() ? answer_.term_en.c_str()
                                                         : std::format("{} → {}", answer_.term_en, answer_.canonical).c_str());
-    ImGui::PushStyleColor(ImGuiCol_Text, kTermColor);
+    ImGui::PushStyleColor(ImGuiCol_Text, term_color());
     ImGui::TextUnformatted(answer_.term_vi.c_str());
     ImGui::PopStyleColor();
     if (!answer_.domain.empty()) ImGui::TextDisabled("%s", answer_.domain.c_str());
@@ -136,8 +139,9 @@ TranslationPopup::Action TranslationPopup::draw(const std::pair<ImVec2, ImVec2>&
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 6.0f * ui_scale);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10.0f * ui_scale, 8.0f * ui_scale));
-    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(1.0f, 0.995f, 0.96f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.0f, 0.0f, 0.0f, 0.18f));
+    ImGui::PushStyleColor(ImGuiCol_WindowBg,
+                          dark_ui() ? ImVec4(0.16f, 0.17f, 0.19f, 1.0f) : ImVec4(1.0f, 0.995f, 0.96f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_Border, dark_ui() ? ImVec4(1.0f, 1.0f, 1.0f, 0.18f) : ImVec4(0.0f, 0.0f, 0.0f, 0.18f));
     bool open = true;
     ImGui::Begin("##translation", nullptr,
                  ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
@@ -178,7 +182,7 @@ TranslationPopup::Action TranslationPopup::draw(const std::pair<ImVec2, ImVec2>&
     } else {
         ImGui::PushTextWrapPos(0.0f);
         if (state_ == State::Error) {
-            ImGui::PushStyleColor(ImGuiCol_Text, kErrorColor);
+            ImGui::PushStyleColor(ImGuiCol_Text, error_color());
             ImGui::TextUnformatted(error_.c_str());
             ImGui::PopStyleColor();
         } else if (text_.empty()) {
@@ -191,7 +195,7 @@ TranslationPopup::Action TranslationPopup::draw(const std::pair<ImVec2, ImVec2>&
         // Hậu kiểm: thuật ngữ không được dịch như chỉ định, ký hiệu bị mất/đổi.
         if (!issues_.empty()) {
             ImGui::Spacing();
-            ImGui::PushStyleColor(ImGuiCol_Text, kWarnColor);
+            ImGui::PushStyleColor(ImGuiCol_Text, warn_color());
             for (const std::string& issue : issues_) ImGui::TextUnformatted(("• " + issue).c_str());
             ImGui::PopStyleColor();
         }
@@ -221,8 +225,10 @@ TranslationPopup::Action TranslationPopup::draw(const std::pair<ImVec2, ImVec2>&
             ImGui::TextDisabled("Dịch:");
             ImGui::SameLine();
             // Nền ô radio mặc định (FrameBg) gần trùng nền popup: làm đậm lên cho thấy rõ.
-            ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.84f, 0.84f, 0.84f, 1.0f));
-            ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(0.76f, 0.80f, 0.90f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_FrameBg,
+                                  dark_ui() ? ImVec4(0.32f, 0.33f, 0.36f, 1.0f) : ImVec4(0.84f, 0.84f, 0.84f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_FrameBgHovered,
+                                  dark_ui() ? ImVec4(0.38f, 0.44f, 0.58f, 1.0f) : ImVec4(0.76f, 0.80f, 0.90f, 1.0f));
             if (ImGui::RadioButton("cả câu", scope_ == Scope::WholeSentence) && scope_ != Scope::WholeSentence) {
                 action = Action::UseWholeSentence;
             }

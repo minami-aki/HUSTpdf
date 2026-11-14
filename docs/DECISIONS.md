@@ -165,6 +165,32 @@ Tập `tools/eval/nuclear.csv` (40 câu hạt nhân – nguyên tử, có ngữ 
 - Thư mục dữ liệu `%APPDATA%\Pdfread`, `%LOCALAPPDATA%\Pdfread` -> `…\HUSTpdf`; lần chạy đầu đổi tên thư mục cũ sang mới nếu thư mục mới chưa có (`migrate_legacy_data_dirs`), đường dẫn mô hình đã lưu nằm trong thư mục cũ được trỏ sang thư mục mới.
 - Lưu ý khi thử nghiệm: app Claude chạy dạng gói MSIX nên tiến trình khởi chạy từ đó ghi AppData vào bản ảo (`%LOCALAPPDATA%\Packages\Claude_…\LocalCache\Local`); việc chuyển thư mục thật chỉ xảy ra khi người dùng tự mở app.
 
+## 2026-11-14 — tính năng đọc sách: quyết định và lộ trình (người dùng chốt)
+
+- Ghi chú, highlight, hình vẽ: **lưu riêng trong app** (SQLite, theo dấu vân tay file), không sửa file PDF gốc; có nút **xuất PDF kèm ghi chú** (MuPDF ghi annotation chuẩn vào bản sao).
+- Backend dịch: **CPU, Vulkan, CUDA** — người dùng chọn trong Cài đặt (mặc định "tự động": GPU nếu có, lỗi thì quay về CPU). Máy hiện có driver Vulkan và NVIDIA (RTX 3050 4 GB) nhưng **chưa cài Vulkan SDK / CUDA Toolkit** (cần để build các backend này).
+- Chế độ màu trang: Bình thường / Sepia / Tối / Ấm; bản đầu chấp nhận ảnh trong trang bị đảo màu ở chế độ Tối.
+- Dịch trước trang đang đọc: tùy chọn bật/tắt trong Cài đặt; dùng backend nhanh nhất đang có (GPU nếu có — gần như không tốn CPU; trên CPU chạy luồng ưu tiên thấp, dừng ngay khi người dùng thao tác).
+- Lộ trình (thứ tự người dùng đồng ý):
+  - **M7** — điều hướng & đọc: thanh bên mục lục, link trong PDF bấm được + Quay lại/Tiến tới, dấu trang; tìm kiếm (luồng nền, tô kết quả, F3; tìm bằng tiếng Việt qua glossary/từ điển); chế độ màu trang (shader) + theme giao diện; cửa sổ **Cài đặt** chung.
+  - **M8** — backend GPU: Vulkan + CUDA (DLL backend của llama.cpp, nạp động), chọn trong Cài đặt, tự quay về CPU.
+  - **M9** — highlight/gạch chân/ghi chú (kèm lưu bản dịch), bảng ghi chú, xuất Markdown/CSV và xuất PDF có annotation.
+  - **M10** — dịch trước trang đang đọc, dịch song song nhiều câu trong một đoạn; in (bản nhanh qua trình in mặc định của Windows).
+  - **M11** — vẽ tay (ink), hình khối, tẩy, hoàn tác.
+
+## 2026-11-14 — M7: điều hướng, tìm kiếm, chế độ màu, Cài đặt
+
+- **Mục lục:** `fz_load_outline` duyệt trước-thứ-tự (không đệ quy) thành danh sách phẳng có cấp; thanh bên vẽ cây, tô mục ứng với trang đang đọc, mở sẵn mọi nhánh nếu ≤ 40 mục. Đọc trên luồng mở file.
+- **Link:** `fz_load_links` theo trang, cache trong `Document`, trích cùng stext trên text worker (UI thread không gọi MuPDF). Tọa độ quy về point từ góc trên-trái trang. Nhấn mà không kéo (< 4 px) mới kích hoạt link, nên bôi đen trên link vẫn được. Link ngoài chỉ mở `http`, `https`, `mailto` (qua `ShellExecuteW`); các scheme khác bị bỏ qua.
+- **Lịch sử:** mỗi lần nhảy (link, mục lục, dấu trang, kết quả tìm) lưu vị trí (trang + y) vào ngăn Quay lại, tối đa 100.
+- **Dấu trang:** bảng `bookmarks` trong SQLite (schema v2), theo dấu vân tay file, sắp theo trang rồi y.
+- **Tìm kiếm:** một luồng riêng có `fz_context` clone; text mỗi trang được "gập" (chữ thường, cả tiếng Việt/Hy Lạp; khoảng trắng gộp) và cache, nên lần tìm sau chỉ quét chuỗi; chỉ tính khung tô sáng cho trang có kết quả. Kết quả đẩy về UI dần (khi có kết quả hoặc mỗi 150 ms), tìm mới thì hủy lần cũ. Đo: Lamarsh 801 trang, lần đầu 2,45 s (phần lớn là trích text), "delayed neutron" 48 kết quả.
+- **Tìm bằng tiếng Việt:** truy vấn có chữ tiếng Việt thì tra ngược glossary (`english_for`: khớp đúng `term_vi` trước, nếu không thì `term_vi` chứa cả cụm theo ranh giới từ), tìm đồng thời tối đa 12 thuật ngữ tiếng Anh. Vd. "độ phản ứng" → "reactivity", 164 kết quả trong Lamarsh.
+- **Chế độ màu trang:** dùng `fz_tint_pixmap` (màu chữ/màu giấy) ngay khi render tile thay vì shader — không phải sửa đường vẽ OpenGL; màu là một phần khóa tile, đổi chế độ thì render lại các trang đang thấy. Chế độ Tối đổi luôn theme ImGui sang tối. Ảnh trong trang bị nhuộm màu theo (đã chấp nhận).
+- **Vừa rộng với tài liệu nhiều khổ:** khổ tiêu biểu = khổ phổ biến nhất nếu chiếm ≥ 30 % số trang, nếu không thì trung vị rộng/cao (sách scan mỗi trang một khổ — Krane trước đây bị tràn ngang vì chọn nhóm 466 pt trong khi nhiều trang tới 707 pt). Ở chế độ vừa rộng/vừa trang, trang đang đọc được căn giữa theo chiều ngang.
+- **Cửa sổ Cài đặt** (Ctrl+,) gộp: Hiển thị (chế độ màu), Dịch (dịch tự động, cả câu, ngữ cảnh), Mô hình dịch (cửa sổ "Mô hình" cũ). Lưu vào bảng settings: `ui.reading_mode`, `ui.sidebar`, `ui.auto_translate`, `ui.whole_sentence`, `ui.include_context`.
+- **Kiểm thử:** thêm `--search`, `--reading-mode`, `--sidebar`, `--click x,y` (nạp sự kiện chuột thẳng vào ImGui sau `NewFrame` của backend — PostMessage không dùng được vì backend GLFW đọc vị trí con trỏ thật). 136 unit test (thêm tìm kiếm, mục lục/link/SearchService trên PDF sinh tại chỗ, dấu trang, tra ngược glossary, khổ trang trung vị). CPU khi đứng yên sau khi nạp xong mô hình: 0 %.
+
 ## Thông tin tham chiếu
 
 - vcpkg baseline: `177e8175121536d414f405ed8b3099b325a42638` (2026-11-11).

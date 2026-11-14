@@ -69,10 +69,11 @@ void TextService::run_one() {
         doc = doc_;
     }
 
-    TextResult result{.doc = doc->id(), .page = page, .text = nullptr, .error = {}};
+    TextResult result{.doc = doc->id(), .page = page, .text = nullptr, .links = {}, .error = {}};
     try {
         DisplayListPtr list = doc->display_list(page);
         result.text = TextPage::build(*list, doc->page(page));
+        result.links = doc->links(page);
     } catch (const std::exception& e) {
         result.error = e.what();
         log::warn("trích text trang {} lỗi: {}", page + 1, e.what());

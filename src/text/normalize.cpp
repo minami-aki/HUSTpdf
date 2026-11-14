@@ -75,6 +75,21 @@ char32_t to_upper(char32_t c) noexcept {
     return c;
 }
 
+char32_t to_lower(char32_t c) noexcept {
+    if (c >= U'A' && c <= U'Z') return c + 32;
+    if (c >= 0xC0 && c <= 0xDE && c != 0xD7) return c + 0x20;               // Latin-1: À…Þ
+    if (c >= 0x100 && c <= 0x17F && c != 0x130 && c != 0x138 && c != 0x149 && c != 0x17F) {
+        const bool even_upper = (c < 0x138) || (c > 0x149 && c < 0x179);
+        if (even_upper) return (c % 2 == 0) ? c + 1 : c;
+        return (c % 2 == 1) ? c + 1 : c;                                  // 0x139..0x148, 0x179..0x17E
+    }
+    if (c == 0x1A0) return 0x1A1;  // Ơ -> ơ
+    if (c == 0x1AF) return 0x1B0;  // Ư -> ư
+    if (c >= 0x1EA0 && c <= 0x1EFF) return (c % 2 == 0) ? c + 1 : c;    // Latin Extended Additional
+    if (c >= 0x391 && c <= 0x3A9 && c != 0x3A2) return c + 0x20;         // Hy Lạp
+    return c;
+}
+
 std::string match_initial_case(std::string_view translation, std::string_view source) {
     std::string out(translation);
     const std::u32string src = to_u32(source.substr(0, std::min<std::size_t>(source.size(), 16)));
