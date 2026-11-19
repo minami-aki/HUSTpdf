@@ -1,6 +1,5 @@
 # HUSTpdf
 
-*(tên cũ: Pdfread)*
 
 Trình đọc PDF khoa học – kỹ thuật, dịch Anh → Việt tức thời khi bôi đen. Chạy hoàn toàn offline, C++20 native (GLFW + OpenGL 3.3 + Dear ImGui, MuPDF, llama.cpp + HY-MT1.5-1.8B).
 
